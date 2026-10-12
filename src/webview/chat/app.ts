@@ -1,4 +1,5 @@
 import type { ChatBlock, HarnessWorkbenchState } from '../../domain/workbench-state.js'
+import { shouldEchoPrompt } from '../../domain/optimistic-prompts.js'
 import { closeCommandMenu, updateCommandMenu } from './command-menu.js'
 import { renderComposer, renderQueued, resizePrompt } from './composer-core.js'
 import {
@@ -106,9 +107,11 @@ export function sendPrompt(): void {
   }
   const configuration = components.composerConfiguration.selection()
   components.composerConfiguration.markSubmitted()
+  const requestId = crypto.randomUUID()
   // The configuration always travels with the prompt: the host stages it
   // immediately for idle sessions and keeps it FIFO-pending for queued ones.
   post('sendPrompt', {
+    requestId,
     text,
     mode: 'queue',
     context: components.editorContext.input(),
@@ -123,7 +126,9 @@ export function sendPrompt(): void {
   // Optimistic echo: render the user bubble immediately so the conversation
   // does not sit empty while the harness admits the prompt and starts the
   // turn. Queued follow-ups (turn already running) stay in the QueueDock.
-  if (!payload?.state?.active?.running) {
+  const command = /^\/(\S+)/u.exec(text)?.[1]
+  const hostCommand = payload?.state.active?.commands?.some(item => item.kind === 'host' && item.name === command) === true
+  if (shouldEchoPrompt(payload?.state.active?.running === true, hostCommand, optimisticBubbles.length)) {
     const nextSeq = optimisticSeq + 1
     setOptimisticSeq(nextSeq)
     const blocks: ChatBlock[] = [
@@ -132,12 +137,11 @@ export function sendPrompt(): void {
     ]
     setOptimisticBubbles([...optimisticBubbles, {
       id: `optimistic-${nextSeq}`,
-      seq: 0,
+      promptRequestId: requestId,
+      seq: (payload?.state.active?.messages.reduce((last, item) => Math.max(last, item.seq), 0) ?? 0) + 0.5,
       kind: 'message',
       role: 'user',
       time: Date.now(),
-      text,
-      imageCount: pastedImages.length,
       blocks,
     }])
   }

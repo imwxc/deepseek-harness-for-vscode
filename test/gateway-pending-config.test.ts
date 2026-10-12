@@ -202,7 +202,7 @@ interface GatewayTestHarness {
   handleControl: (frame: ControlFrame) => void
   handleFollowFrame: (sessionId: string, frame: FollowFrame) => void
   handleRemoteEvent: (event: string, args: readonly unknown[]) => void
-  sendPrompt: (text: string, mode?: 'queue' | 'steer', attachments?: unknown[], configuration?: unknown, signals?: unknown) => Promise<void>
+  sendPrompt: (text: string, mode?: 'queue' | 'steer', attachments?: unknown[], configuration?: unknown, signals?: unknown, requestId?: string) => Promise<void>
   removeQueued: (itemId: string) => Promise<void>
   steerQueued: (itemId: string) => Promise<void>
   createSession: (agentPreset?: string) => Promise<string>
@@ -287,6 +287,14 @@ function idleBoundary(service: GatewayTestHarness): void {
 }
 
 describe('gateway staged configuration', () => {
+  it('preserves the webview request id when attaching editor context', async () => {
+    const { service, client } = createService()
+    await service.sendPrompt('Explain this.', 'queue', [{ kind: 'selection', file: 'timer.ts', text: 'if (timer) return;' }], undefined, undefined, 'webview-request')
+    expect(client.sessionPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      requestId: 'webview-request',
+      content: [expect.objectContaining({ type: 'text' }), { type: 'text', text: 'Explain this.' }],
+    }))
+  })
   it('applies the configuration before admission on the idle fast path', async () => {
     const { service, client } = createService()
 

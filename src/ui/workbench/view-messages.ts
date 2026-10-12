@@ -148,47 +148,49 @@ export interface WorkbenchViewActions {
       await ctx.gateway.loadOlder()
       break
     case 'sendPrompt': {
-      const text = typeof value.text === 'string' ? value.text : ''
-      const staged = promptConfiguration(value.configuration)
-      if (value.configuration !== undefined && staged === undefined) {
-        throw new Error(vscode.l10n.t('Invalid model or mode configuration.'))
-      }
-      const context = promptContextInput(value.context)
-      const selectionId = context === undefined && ctx.configuration.get().autoAttachSelection
-        ? ctx.editorSelection.current()?.id
-        : context?.selectionId
-      const selection = ctx.editorSelection.attachment(selectionId)
-      const files = await ctx.workspaceFiles.attachments(context?.fileIds ?? [])
-      const images = promptImageAttachments(value.images)
-      const attachments = [...(selection === undefined ? [] : [selection]), ...files, ...images]
-      // Host-computed task signals for the 'auto' reasoning layer, measured
-      // after the final attachment set is known: a short question carrying a
-      // large @-file or editor selection must never be judged trivial.
-      const textChars = attachments.reduce(
-        (sum, attachment) => sum + ('text' in attachment ? attachment.text.length : 0),
-        text.length,
-      )
-      const signals = {
-        promptTokens: Math.ceil(textChars / 4),
-        attachmentCount: attachments.length,
-        imageCount: images.length,
-      }
-      // The gateway owns configuration staging: idle prompts apply it ahead
-      // of admission; queued prompts keep it in a FIFO pending queue applied
-      // at the next turn boundary. No snapshot check races here.
+      const requestId = optionalString(value.requestId)
       try {
+        const text = typeof value.text === 'string' ? value.text : ''
+        const staged = promptConfiguration(value.configuration)
+        if (value.configuration !== undefined && staged === undefined) {
+          throw new Error(vscode.l10n.t('Invalid model or mode configuration.'))
+        }
+        const context = promptContextInput(value.context)
+        const selectionId = context === undefined && ctx.configuration.get().autoAttachSelection
+          ? ctx.editorSelection.current()?.id
+          : context?.selectionId
+        const selection = ctx.editorSelection.attachment(selectionId)
+        const files = await ctx.workspaceFiles.attachments(context?.fileIds ?? [])
+        const images = promptImageAttachments(value.images)
+        const attachments = [...(selection === undefined ? [] : [selection]), ...files, ...images]
+        // Host-computed task signals for the 'auto' reasoning layer, measured
+        // after the final attachment set is known: a short question carrying a
+        // large @-file or editor selection must never be judged trivial.
+        const textChars = attachments.reduce(
+          (sum, attachment) => sum + ('text' in attachment ? attachment.text.length : 0),
+          text.length,
+        )
+        const signals = {
+          promptTokens: Math.ceil(textChars / 4),
+          attachmentCount: attachments.length,
+          imageCount: images.length,
+        }
+        // The gateway owns configuration staging: idle prompts apply it ahead
+        // of admission; queued prompts keep it in a FIFO pending queue applied
+        // at the next turn boundary. No snapshot check races here.
         await ctx.gateway.sendPrompt(
           text,
           value.mode === 'steer' ? 'steer' : 'queue',
           attachments,
           staged,
           signals,
+          requestId,
         )
       } catch (cause) {
         // The prompt never entered the queue: tell the webview to roll back
         // its optimistic echo so the failed message does not linger as if it
         // had been sent (and later real messages do not stack behind it).
-        await ctx.postToHosts({ type: 'sendPromptFailed' })
+        await ctx.postToHosts({ type: 'sendPromptFailed', requestId })
         throw cause
       }
       break

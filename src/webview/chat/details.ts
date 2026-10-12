@@ -121,6 +121,13 @@ export function renderDetails(): void {
         fragment.append(node('div', 'subagent-row diagnostic', `${agent.id.slice(0, 8)} · ${agent.reason}`))
         continue
       }
+      if (agent.mode === 'external') {
+        const row = node('div', 'subagent-row')
+        row.append(node('strong', '', agent.label || agent.id.slice(0, 8)), node('small', '', t('externalTask')))
+        row.title = t('externalTaskHint')
+        fragment.append(row)
+        continue
+      }
       const button = node('button', 'subagent-row') as HTMLButtonElement
       button.append(node('span', `job-status ${agent.activity}`), node('strong', '', agent.label || `Agent ${agent.id.slice(0, 8)}`))
       button.append(node('small', '', `${agent.mode === 'continuable' ? t('continuableConversation') : t('oneShot')}${agent.hasChildren ? t('hasChildAgents') : ''}`))

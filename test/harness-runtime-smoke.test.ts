@@ -12,6 +12,7 @@ import { bootSmokeRuntime } from './helpers/runtime-smoke.js'
 describe.runIf(process.env.DSH_RUNTIME_SMOKE === '1')('bundled Harness end-to-end', () => {
   it('authenticates, streams reasoning, settles and reloads V4 history through the headless Gateway', async () => {
     const requests: string[] = []
+    const promptRequestId = randomUUID() as SessionPromptRequest['requestId']
     const server = createServer((request, response) => {
       requests.push(request.url ?? '')
       request.resume()
@@ -59,7 +60,7 @@ describe.runIf(process.env.DSH_RUNTIME_SMOKE === '1')('bundled Harness end-to-en
       for await (const frame of client.sessionFollow({ address, maxMessages: 80 }, abort.signal)) {
         if (frame.type === 'snapshot') {
           stream.reset(frame.assistantStream)
-          await client.sessionPrompt({ requestId: randomUUID() as SessionPromptRequest['requestId'], sessionId: created.sessionId, mode: 'queue', content: [{ type: 'text', text: 'Say smoke passed.' }] })
+          await client.sessionPrompt({ requestId: promptRequestId, sessionId: created.sessionId, mode: 'queue', content: [{ type: 'text', text: '[Selection: synthetic.ts]\nconst answer = 42' }, { type: 'text', text: 'Say smoke passed.' }] })
         } else if (frame.type === 'assistant-stream') {
           stream.accept(frame.frame)
           liveReasoning ||= projectConversation(stream.entries()).messages.some((item) => item.blocks?.some((block) => block.kind === 'reasoning' && block.text !== '') === true)
@@ -74,6 +75,10 @@ describe.runIf(process.env.DSH_RUNTIME_SMOKE === '1')('bundled Harness end-to-en
       expect(liveReasoning).toBe(true)
       expect(requests).toContain('/v1/messages')
       const projected = projectConversation(presentationHistory(history)).messages
+      const userIndex = projected.findIndex(item => item.promptRequestId === promptRequestId)
+      const answerIndex = projected.findIndex(item => item.blocks?.some(block => block.text === 'Smoke passed.'))
+      expect(userIndex).toBeGreaterThanOrEqual(0)
+      expect(userIndex).toBeLessThan(answerIndex)
       expect(projected.some((item) => item.blocks?.some((block) => block.text === 'Smoke passed.'))).toBe(true)
       expect(projected.some((item) => item.blocks?.some((block) => block.kind === 'reasoning' && block.duration?.endedAt !== undefined))).toBe(true)
       // A reconnect gets a clean baseline and the same completed transcript.

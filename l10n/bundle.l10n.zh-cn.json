@@ -12,6 +12,8 @@
   "Search models…": "搜索模型…",
   "No matching models.": "没有匹配的模型。",
   "History": "历史",
+  "External task": "外部任务",
+  "External tasks do not have a local conversation to open.": "外部任务没有可打开的本地会话。",
   "Delete": "删除",
   "All compatibility": "全部兼容性",
   "Native Agent": "原生 Agent",

@@ -4,6 +4,7 @@ import { projectProcessingStatus } from '../../domain/processing-status.js'
 import { projectReasoningTimeline } from '../../domain/reasoning-timeline.js'
 import { projectTurnProcesses } from '../../domain/turn-process.js'
 import { visibleTranscript } from '../../domain/transcript-context.js'
+import { reconcileOptimisticPrompts } from '../../domain/optimistic-prompts.js'
 import { createContextNotice } from '../runtime-context/notice.js'
 import { renderMarkdown, resetReferenceValidation } from '../markdown.js'
 import { createSessionChangesCard } from '../session-changes/component.js'
@@ -30,7 +31,6 @@ import { MessageReconciler } from './message-reconciler.js'
 import { conversationScroll } from './scroll.js'
 import { TurnChangesController } from './turn-changes-controller.js'
 import { appendTodoRows, todoListSignature, todoProgress, type TodoEntry } from './todo-list.js'
-import type { OptimisticBubble } from './types.js'
 import {
   captureDisclosures,
   copyText,
@@ -66,9 +66,10 @@ export function renderMessages(active: ActiveSessionView | undefined): void {
     resetReferenceValidation()
   }
   if (sessionChanged && optimisticBubbles.length > 0) setOptimisticBubbles([])
-  reconcileOptimistic(realMessages)
+  const reconciled = reconcileOptimisticPrompts(realMessages, optimisticBubbles)
+  setOptimisticBubbles(reconciled.pending)
   const running = active?.running ?? false
-  const rawMessages = [...realMessages, ...optimisticBubbles]
+  const rawMessages = reconciled.messages
   const processing = projectProcessingStatus(active, rawMessages, payload?.state.phase, optimisticBubbles.length > 0)
   const presentation = projectTurnProcesses(rawMessages, running)
   const messages = settleRunningDurations(presentation.messages, running)
@@ -134,10 +135,6 @@ export function messageText(item: ChatItem): string {
     .trim()
 }
 
-function messageImageCount(item: ChatItem): number {
-  return (item.blocks || []).filter((block) => block.kind === 'image').length
-}
-
 /**
  * When the session is not running, any turn that never emitted a `turn/end`
  * event (cancelled, interrupted, or an event that was dropped) would otherwise
@@ -153,36 +150,6 @@ function settleRunningDurations(messages: readonly ChatItem[], running: boolean)
     return { ...item, workDuration: { ...item.workDuration, endedAt: Date.now() } }
   })
   return changed ? settled : messages
-}
-
-/** Drops optimistic bubbles whose real user/message has now surfaced (FIFO by content).
- *
- * A mode-switch carry-over payload rides inside the real message as a leading
- * hidden block, so reconciliation compares against the visible remainder only.
- */
-function reconcileOptimistic(realMessages: readonly ChatItem[]): void {
-  if (optimisticBubbles.length === 0) return
-  const matched = new Set<string>()
-  const pending: OptimisticBubble[] = []
-  for (const bubble of optimisticBubbles) {
-    const index = realMessages.findIndex((message) =>
-      !matched.has(message.id)
-      && message.kind === 'message'
-      && message.role === 'user'
-      && visibleUserText(message) === bubble.text
-      && messageImageCount(message) === bubble.imageCount
-    )
-    const found = index === -1 ? undefined : realMessages[index]
-    if (found === undefined) pending.push(bubble)
-    else matched.add(found.id)
-  }
-  setOptimisticBubbles(pending)
-}
-
-/** User-typed text of one chat item with any carried-over lead block stripped. */
-function visibleUserText(item: ChatItem): string {
-  const blocks = item.kind === 'message' && item.role === 'user' ? splitCarriedBlocks(item.blocks ?? []).rest : item.blocks ?? []
-  return blocks.filter((block) => block.kind === 'text').map((block) => block.text).join('\n').trim()
 }
 
 function latestConclusionId(messages: readonly ChatItem[]): string | undefined {

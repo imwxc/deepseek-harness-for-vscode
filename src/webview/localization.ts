@@ -155,6 +155,8 @@ export const ENGLISH_WEBVIEW_MESSAGES = {
   stopBackgroundJob: 'Stop background job',
   jobOutputTruncated: 'Earlier output was omitted.',
   agents: 'Agents',
+  externalTask: 'External task',
+  externalTaskHint: 'External tasks do not have a local conversation to open.',
   slashCommands: 'Slash commands',
   promptPlaceholder: 'Ask DeepSeek Harness… Type / for commands, @ for files',
   message: 'Message',

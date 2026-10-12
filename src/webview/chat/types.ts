@@ -1,7 +1,6 @@
 import type { HarnessConfiguration } from '../../config/configuration.js'
 import type { ConnectionSettingsState } from '../../domain/connection-settings.js'
 import type {
-  ChatBlock,
   CommandEntry,
   HarnessWorkbenchState,
 } from '../../domain/workbench-state.js'
@@ -141,17 +140,7 @@ export interface PastedImage {
   readonly previewUrl: string
 }
 
-/** A locally echoed user bubble waiting for the authoritative user/message. */
-export interface OptimisticBubble {
-  readonly id: string
-  readonly seq: number
-  readonly kind: 'message'
-  readonly role: 'user'
-  readonly time: number
-  readonly text: string
-  readonly imageCount: number
-  readonly blocks: readonly ChatBlock[]
-}
+export type { OptimisticBubble } from '../../domain/optimistic-prompts.js'
 
 export interface SearchResult {
   readonly sessionId: string

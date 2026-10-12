@@ -911,6 +911,7 @@ export class HarnessGatewayService implements vscode.Disposable {
       await this.selectSession(String(summary.parentSessionId))
       const child = this.currentSubagentRows().find((entry) => entry.kind === 'child' && String(entry.id) === sessionId)
       if (child === undefined || child.kind !== 'child') throw new Error(vscode.l10n.t('Could not resolve the sub-agent from its parent session.'))
+      if (child.mode === 'external') throw new Error(vscode.l10n.t('External tasks do not have a local conversation to open.'))
       await this.selectSubagent(sessionId, child.mode)
       return
     }
@@ -966,6 +967,7 @@ export class HarnessGatewayService implements vscode.Disposable {
     attachments: readonly PromptAttachment[] = [],
     configuration?: PromptConfiguration,
     signals?: PromptEffortSignals,
+    requestId?: string,
   ): Promise<void> {
     // A profile mutation reserves this gate before stopping the runtime.
     // Waiting here prevents a first-run install/restart from dropping a prompt
@@ -1071,7 +1073,7 @@ export class HarnessGatewayService implements vscode.Disposable {
     ]
       if (subagentAddress === undefined) {
         await promptClient.sessionPrompt({
-          requestId: newPromptRequestId(),
+          requestId: requestId === undefined ? newPromptRequestId() : requestId as DshSessionRequestId,
           sessionId: target as SessionId,
           mode,
           content,
@@ -1083,7 +1085,7 @@ export class HarnessGatewayService implements vscode.Disposable {
           throw new Error(vscode.l10n.t('Image attachments are not supported in sub-agent conversations.'))
         }
         await promptClient.subagentPrompt({
-          requestId: newPromptRequestId(),
+          requestId: requestId === undefined ? newPromptRequestId() : requestId as DshSessionRequestId,
           parentSessionId: subagentAddress.parentSessionId,
           childSessionId: subagentAddress.childSessionId,
           mode: 'continuable',

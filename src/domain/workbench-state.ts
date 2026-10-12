@@ -51,6 +51,8 @@ export interface ChatBlock {
 
 export interface ChatItem {
   readonly id: string
+  /** Native user source.rpcId, used to replace the exact local submission echo. */
+  readonly promptRequestId?: string
   /** Runtime turn identity, including tools and terminal notices. */
   readonly turn?: number
   readonly seq: number
@@ -228,7 +230,7 @@ export type SubagentView = {
   readonly id: string
   readonly activity: 'running' | 'inactive'
   readonly hasChildren: boolean
-  readonly mode: 'one-shot' | 'continuable'
+  readonly mode: 'one-shot' | 'continuable' | 'external'
   readonly label?: string
 } | {
   readonly kind: 'diagnostic'
@@ -574,6 +576,7 @@ export function projectConversation(entries: readonly HistoryEntry[], labels = E
           time: event.time,
           kind: human ? 'message' : 'context',
           role: 'user',
+          ...(human && 'rpcId' in source && typeof source.rpcId === 'string' ? { promptRequestId: source.rpcId } : {}),
           ...(!human ? { title: contextTitle(source, labels), contextSource: projectContextSource(source) } : {}),
           blocks: projectBlocks(event.data.content, labels),
         })

@@ -10,7 +10,7 @@ export function subagentCatalogRows(entries: readonly SubagentCatalogEntry[], su
     const common = {
       kind: 'child' as const, id: entry.id,
       activity: summary?.running === true ? 'running' as const : 'inactive' as const,
-      hasChildren: Array.isArray(descendants) && descendants.length > 0,
+      hasChildren: entry.mode !== 'external' && Array.isArray(descendants) && descendants.length > 0,
     }
     return entry.mode === 'continuable'
       ? { ...common, mode: entry.mode, label: entry.label }

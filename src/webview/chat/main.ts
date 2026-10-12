@@ -68,7 +68,7 @@ window.addEventListener('message', (event) => {
     // does not support image input). Roll back the optimistic echo so the
     // failed message does not linger as if it had been sent.
     if (optimisticBubbles.length > 0) {
-      setOptimisticBubbles([])
+      setOptimisticBubbles(optimisticBubbles.filter(bubble => bubble.promptRequestId !== event.data.requestId))
       render()
     }
     return

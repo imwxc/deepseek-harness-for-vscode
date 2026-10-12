@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ChatItem } from '../src/domain/workbench-state.js'
+import { reconcileOptimisticPrompts, type OptimisticBubble } from '../src/domain/optimistic-prompts.js'
 import { MessageReconciler } from '../src/webview/chat/message-reconciler.js'
 import { assistant, messageBody, streamingDom } from './helpers/streaming-dom.js'
 
@@ -31,6 +32,27 @@ function transcript(tail?: HTMLElement) {
 }
 
 describe('transcript node identity', () => {
+  it('replaces a submitted echo before the retained streaming answer, without a duplicate at the end', () => {
+    const { root, render, flush } = transcript()
+    const question: OptimisticBubble = { id: 'echo', promptRequestId: 'send-1', seq: 10.5, time: 100, kind: 'message', role: 'user', blocks: [{ kind: 'text', text: 'Explain this.' }] }
+    const live = { ...assistant('partial-1:1', [{ kind: 'text', text: 'Answer', streaming: true }]), seq: 12 }
+    render([question])
+    render(reconcileOptimisticPrompts([live], [question]).messages)
+    flush()
+    const answerNode = root.lastElementChild
+    expect(root.firstElementChild?.textContent).toBe('Explain this.')
+    const durable: ChatItem = { ...question, id: 'event-11', seq: 11, blocks: [{ kind: 'text', text: '[Selection]\nif (timer) return;' }, ...question.blocks] }
+    const reconciled = reconcileOptimisticPrompts([durable, live], [question])
+    render(reconciled.messages)
+    flush()
+    expect(root.children).toHaveLength(2)
+    expect(root.lastElementChild).toBe(answerNode)
+    expect(root.firstElementChild?.textContent).toContain('Explain this.')
+    const final = { ...live, id: 'event-13', seq: 13, status: 'success' as const, blocks: [{ kind: 'text' as const, text: 'Complete answer.' }] }
+    render(reconcileOptimisticPrompts([durable, final], reconciled.pending).messages)
+    expect(root.lastElementChild).toBe(answerNode)
+    expect(root.lastElementChild?.textContent).toBe('Complete answer.')
+  })
   it('inserts new messages before a persistent activity tail without detaching it', () => {
     const tail = document.createElement('div')
     const { root, render } = transcript(tail)
