@@ -79,6 +79,8 @@ describe.runIf(process.env.DSH_RUNTIME_SMOKE === '1')('bundled Harness end-to-en
       const answerIndex = projected.findIndex(item => item.blocks?.some(block => block.text === 'Smoke passed.'))
       expect(userIndex).toBeGreaterThanOrEqual(0)
       expect(userIndex).toBeLessThan(answerIndex)
+      const search = await client.sessionSearch({ query: 'smoke passed' })
+      expect(search.items.some(item => item.sessionId === created.sessionId)).toBe(true)
       expect(projected.some((item) => item.blocks?.some((block) => block.text === 'Smoke passed.'))).toBe(true)
       expect(projected.some((item) => item.blocks?.some((block) => block.kind === 'reasoning' && block.duration?.endedAt !== undefined))).toBe(true)
       // A reconnect gets a clean baseline and the same completed transcript.

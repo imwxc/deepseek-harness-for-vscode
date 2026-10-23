@@ -7,8 +7,11 @@ import { renderMcpRows } from '../config/mcp.js'
 export function renderOverlay(configuration: HarnessConfiguration, gatewayPluginPath: string, historyHome?: string, compression: 'zstd' | 'none' = 'zstd'): string {
   const webSearchRow = configuration.webSearch ? '' : `- id: web-search-deepseek
   disabled: true
+- id: web-deepseek-api
+  disabled: true
 
 `
+  const directWebApi = configuration.webSearch && configuration.webSearchProvider === 'search-api'
   const historyRows = historyHome === undefined ? '' : `
 - id: session-persistence-jsonl
   config:
@@ -35,6 +38,13 @@ ${historyRows}
 - id: ui-sidebar-documentpreview
   disabled: true
 
+# rc.3 disables full-text search in the shipped Web profile. The native history
+# panel still searches message contents; build an ephemeral index on first use.
+- id: session-query-sqlite
+  config:
+    path: ':memory:'
+    openAt: first-search
+
 - insert:
     # Keep the official API transport alive by providing only the bind facts
     # consumed by dsh-client-connection. No HTTP fallback is registered.
@@ -45,7 +55,12 @@ ${historyRows}
 ${mcpRows === '' ? '' : `
 ${mcpRows}`}
 
-${webSearchRow}- id: llm-deepseek
+${webSearchRow}- id: web
+  config:
+    searchProvider: ${directWebApi ? 'deepseek-search-api' : 'deepseek-official'}
+    fetchProvider: ${directWebApi ? 'deepseek-fetch-api' : 'http'}
+
+- id: llm-deepseek
   config:
     reasoningEffort: ${configuration.reasoningEffort}
 

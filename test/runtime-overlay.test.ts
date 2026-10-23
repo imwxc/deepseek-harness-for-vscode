@@ -53,8 +53,23 @@ describe('Harness Web profile overlay', () => {
     const rows = load(overlay) as Array<{ id?: string; disabled?: boolean }>
     expect(rows).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'web-search-deepseek', disabled: true }),
+      expect.objectContaining({ id: 'web-deepseek-api', disabled: true }),
+      expect.objectContaining({ id: 'web', config: { searchProvider: 'deepseek-official', fetchProvider: 'http' } }),
     ]))
     expect(() => load(overlay)).not.toThrow()
+  })
+
+  it.each([true, false])('selects direct Search/Fetch only when search is enabled (%s)', (enabled) => {
+    const rows = load(renderOverlay({
+      model: 'deepseek-flash', reasoningEffort: 'high', provider: 'deepseek-official',
+      agentPreset: 'standard', permissionMode: 'workspace-write', webSearch: enabled,
+      webSearchProvider: 'search-api', autoAttachSelection: false, experimentalAutoEffort: false,
+      worktreeAutoMerge: 'never',
+    }, '/extension/gateway.mjs')) as { id?: string; disabled?: boolean; config?: Record<string, unknown> }[]
+    expect(rows.find(row => row.id === 'web')?.config).toEqual(enabled
+      ? { searchProvider: 'deepseek-search-api', fetchProvider: 'deepseek-fetch-api' }
+      : { searchProvider: 'deepseek-official', fetchProvider: 'http' })
+    if (!enabled) expect(rows.find(row => row.id === 'web-deepseek-api')?.disabled).toBe(true)
   })
 
   it('passes the off reasoning effort through and safely quotes provider ids', () => {

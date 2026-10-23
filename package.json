@@ -230,6 +230,19 @@
           "default": true,
           "markdownDescription": "%config.webSearch%"
         },
+        "deepseekHarness.webSearchProvider": {
+          "type": "string",
+          "enum": [
+            "messages",
+            "search-api"
+          ],
+          "enumDescriptions": [
+            "%config.webSearchProvider.messages%",
+            "%config.webSearchProvider.searchApi%"
+          ],
+          "default": "messages",
+          "markdownDescription": "%config.webSearchProvider%"
+        },
         "deepseekHarness.experimentalAutoEffort": {
           "type": "boolean",
           "default": false,
@@ -272,10 +285,10 @@
     "vitest": "^4.0.0"
   },
   "dependencies": {
-    "@deepseek-ai/dsh": "0.2.1-alpha.2",
-    "dompurify": "3.4.13",
+    "@deepseek-ai/dsh": "0.2.1-rc.3",
+    "dompurify": "3.4.17",
     "highlight.js": "^11.12.0",
-    "markdown-it": "15.0.0",
+    "markdown-it": "15.0.3",
     "node": "22.22.3",
     "pnpm": "11.21.0",
     "undici": "^7.29.0",
@@ -288,7 +301,7 @@
     "koffi@3.3.1": true,
     "keytar@7.9.0": true,
     "protobufjs@7.6.6": true,
-    "@deepseek-ai/dsh-subprocess-local@0.2.1-alpha.2": true,
+    "@deepseek-ai/dsh-subprocess-local@0.2.1-rc.3": true,
     "@vscode/vsce-sign@2.0.9": true,
     "@google/genai@1.52.0": true
   },

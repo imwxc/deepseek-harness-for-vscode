@@ -22,12 +22,30 @@ function fixture() {
   const html = workbenchHtml({ asWebviewUri: (uri: string) => uri, cspSource: 'test' } as unknown as Webview, 'test' as unknown as Uri)
   document.body.innerHTML = new window.DOMParser().parseFromString(html, 'text/html').body.innerHTML
   const onLoad = vi.fn()
+  const onSetEnabled = vi.fn()
+  const onRemove = vi.fn()
   const component = createPluginCenterComponent({
     document, translate: createWebviewTranslator(undefined), onLoad,
-    onOpen: vi.fn(), onInstall: vi.fn(), onRemove: vi.fn(), onOpenExternal: vi.fn(),
+    onOpen: vi.fn(), onInstall: vi.fn(), onRemove, onSetEnabled, onOpenExternal: vi.fn(),
   })
-  return { component, onLoad }
+  return { component, onLoad, onSetEnabled, onRemove }
 }
+
+it('keeps missing declared packages removable but does not offer to enable absent files', () => {
+  const f = fixture()
+  f.component.open()
+  document.querySelector<HTMLButtonElement>('[data-plugin-tab="installed"]')!.click()
+  f.component.update({ installed: [{ name: 'broken-fixture', version: '', source: 'profile', enabled: false, removable: true, missing: true, includesWebClient: false }], busy: false })
+  const card = document.querySelector('.installed-plugin-card')!
+  expect(card.textContent).toContain('Package files are missing.')
+  const enable = Array.from(card.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Enable')!
+  expect(enable.disabled).toBe(true)
+  const remove = Array.from(card.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent === 'Remove')!
+  expect(remove.disabled).toBe(false)
+  remove.click()
+  expect(f.onRemove).toHaveBeenCalledWith('broken-fixture')
+  expect(f.onSetEnabled).not.toHaveBeenCalled()
+})
 
 it('shows an unavailable GitHub total and retries a degraded catalog when reopened', async () => {
   const f = fixture()

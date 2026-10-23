@@ -2,7 +2,7 @@
 export const MODEL_OPTIONS = [
   {
     id: 'deepseek-flash',
-    label: 'DeepSeek V41 Flash',
+    label: 'DeepSeek-V4.1-Flash',
     description: 'Faster responses for everyday coding and rapid iteration.',
   },
   {

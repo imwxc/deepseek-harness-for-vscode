@@ -1,5 +1,5 @@
 import { Context } from '@deepseek-ai/cordis'
-import JsonlPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import * as JsonlPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { join } from 'node:path'
 import { historyCompression } from './encoding.js'
 

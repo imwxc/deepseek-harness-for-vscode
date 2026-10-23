@@ -12,6 +12,7 @@ import { isNpmPackageName, normalizePluginSpec } from './plugin-spec.js'
 import { RoutingSuiteInstaller } from './routing-suite/installer.js'
 import { ROUTING_SUITE_MANIFEST } from './routing-suite/manifest.js'
 import type { InstalledDshPlugin } from './types.js'
+import { installedBundleViews } from './bundle-views.js'
 
 const PROFILE = 'web'
 const DEFAULT_PLUGINS_SEED_FILE = 'default-plugins-seeded.json'
@@ -39,13 +40,7 @@ export class DshPluginManager {
   async listInstalled(): Promise<readonly InstalledDshPlugin[]> {
     if (this.client === undefined) return await this.listLegacyInstalled()
     const bundles = await this.client().pluginListBundles()
-    const rows: InstalledDshPlugin[] = bundles.map((bundle) => ({
-      name: bundle.name, version: bundle.version ?? '', source: bundle.installed ? 'profile' : 'DSH',
-      ...(bundle.description === undefined ? {} : { description: bundle.description }),
-      enabled: bundle.enabled, removable: bundle.removable,
-      ...(bundle.readOnlyReason === undefined ? {} : { readOnlyReason: bundle.readOnlyReason }),
-      includesWebClient: bundle.rows.some((row) => row.moduleName.includes('client-ui')),
-    }))
+    const rows = installedBundleViews(bundles)
     const suite = await this.routingSuite.status(await this.profileDependencies())
     if (suite) rows.push({ name: ROUTING_SUITE_MANIFEST.installedName, version: suite.version,
       source: 'built-in managed suite', includesWebClient: true, removable: true })

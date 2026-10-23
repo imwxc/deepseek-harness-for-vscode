@@ -229,6 +229,9 @@ export function createPluginCenterComponent(options: {
     heading.append(title)
     if (plugin.description !== undefined) card.append(heading, element('p', 'plugin-description', plugin.description))
     else card.append(heading)
+    if (plugin.missing || plugin.error) {
+      card.append(element('p', 'plugin-status error', plugin.missing ? options.translate('pluginFilesMissing') : plugin.error))
+    }
     const meta = element('div', 'plugin-card-meta')
     meta.append(element('span', 'plugin-source-badge', plugin.source))
     if (plugin.includesWebClient) meta.append(element('span', 'plugin-web-badge', options.translate('officialWebUi')))
@@ -246,7 +249,7 @@ export function createPluginCenterComponent(options: {
     actions.append(remove)
     if (plugin.enabled !== undefined && options.onSetEnabled) {
       const toggle = button('secondary-button', options.translate(plugin.enabled ? 'disablePlugin' : 'enablePlugin'))
-      toggle.disabled = snapshot.busy || plugin.readOnlyReason !== undefined
+      toggle.disabled = snapshot.busy || plugin.readOnlyReason !== undefined || (plugin.missing === true && !plugin.enabled)
       toggle.title = plugin.readOnlyReason ?? ''
       toggle.addEventListener('click', () => options.onSetEnabled?.(plugin.name, !plugin.enabled))
       actions.prepend(toggle)

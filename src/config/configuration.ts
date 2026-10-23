@@ -42,6 +42,8 @@ export interface HarnessConfiguration {
   readonly permissionMode: PermissionMode
   /** Whether the built-in DeepSeek web-search provider stays enabled. */
   readonly webSearch: boolean
+  /** Native DSH web provider pair. Omitted keeps Messages search + local HTTP fetch. */
+  readonly webSearchProvider?: 'messages' | 'search-api'
   /** Auto-attach the active editor selection as context when sending. */
   readonly autoAttachSelection: boolean
   /** Whether experimental automatic reasoning effort mode is enabled. */
@@ -79,6 +81,7 @@ export class ConfigurationService implements vscode.Disposable {
       provider: nonEmpty(config.get<string>('provider'), 'deepseek-official'),
       permissionMode: permissionMode(config.get<string>('permissionMode')),
       webSearch: config.get<boolean>('webSearch', true),
+      webSearchProvider: config.get<string>('webSearchProvider') === 'search-api' ? 'search-api' : 'messages',
       autoAttachSelection: config.get<boolean>('autoAttachSelection', true),
       experimentalAutoEffort: config.get<boolean>('experimentalAutoEffort', false),
       worktreeAutoMerge: worktreeAutoMergeMode(config.get<string>('worktreeAutoMerge')),
@@ -210,6 +213,7 @@ const RUNTIME_SETTING_KEYS = [
   'deepseekHarness.provider',
   'deepseekHarness.permissionMode',
   'deepseekHarness.webSearch',
+  'deepseekHarness.webSearchProvider',
   'deepseekHarness.autoAttachSelection',
   'deepseekHarness.experimentalAutoEffort',
   'deepseekHarness.mcpServers',

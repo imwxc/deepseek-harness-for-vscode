@@ -16,6 +16,7 @@ export const ENGLISH_WEBVIEW_MESSAGES = {
   pluginCatalogSummary: 'Showing {visible} of {total} loaded · {marketTotal} on GitHub',
   noMatchingPlugins: 'No matching plugins.',
   noInstalledPlugins: 'No profile plugins installed yet.',
+  pluginFilesMissing: 'Package files are missing. Reinstall this plugin to enable it.',
   loadMorePlugins: 'Load more',
   installCustomPlugin: 'Install a package',
   customPluginPlaceholder: 'npm package, github:owner/repo, local path, or tarball URL',

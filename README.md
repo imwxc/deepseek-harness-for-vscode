@@ -4,7 +4,7 @@
 
 A native VS Code coding-agent extension powered by [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Install the platform-specific VSIX and start working—there is no upstream repository to clone, no Node/npm setup, and no local Harness deployment to manage.
 
-> This is the community-maintained **0.6.1 codebase with unreleased fixes**. Current source pins the official `@deepseek-ai/dsh@0.2.1-alpha.2` package (Typert Remote protocol). The published 0.6.1 assets still contain `0.2.1-alpha.1`; DeepSeek Harness remains a Developer Preview.
+> This is the community-maintained **0.6.1 codebase with unreleased fixes**. Current source pins the official `@deepseek-ai/dsh@0.2.1-rc.3` package (Typert Remote protocol). The published 0.6.1 assets still contain `0.2.1-alpha.1`; DeepSeek Harness remains a Developer Preview.
 
 Pending updates fix duplicate user prompts appearing after their answers when editor context is attached, preserve message order during streaming and rapid submissions, and support the new external-task entries in the native subagent catalog. See the [changelog](CHANGELOG.md).
 
@@ -117,7 +117,7 @@ Old private/globalStorage histories are migrated through the official session co
 
 Open the VS Code history panel to refresh its list; refresh the official Web UI page to discover externally created history. VS Code filters by the current project, while official DSH may show worktree sessions under their own workspace or as ungrouped sessions. This shares **saved history**, not another process's transient token stream. Kernel locks prevent simultaneous writes to one session: close the owning backend before continuing on the other side, or create a fork. Model credentials and installed plugins are configured independently.
 
-Both runtimes must support the same log format (this build uses **V4, DSH 0.2.1-alpha.2**). An older official CLI cannot read new V4 logs and must be updated to use this sharing feature; original V2/V3 files are retained, but are not a downgrade-sync mechanism. This is not cloud, cross-device, or Windows/WSL cross-kernel synchronization; do not run live shared stores through a network/sync drive. Back up both the shared home and the old private home before a major runtime upgrade.
+Both runtimes must support the same log format (this build uses **V4, DSH 0.2.1-rc.3**). An older official CLI cannot read new V4 logs and must be updated to use this sharing feature; original V2/V3 files are retained, but are not a downgrade-sync mechanism. This is not cloud, cross-device, or Windows/WSL cross-kernel synchronization; do not run live shared stores through a network/sync drive. Back up both the shared home and the old private home before a major runtime upgrade.
 
 ## DSH plugins
 
@@ -140,6 +140,9 @@ Host tools, policies, and runtime services contributed by a plugin work in this 
 Marketplace cards classify known entries as **Agent compatible**, **Agent works · Web UI unavailable**, or **Official Web UI only**. UI-only themes and layout extensions cannot affect the native workbench, so their install button is disabled. GitHub-only entries without curated metadata are marked **Compatibility unknown** until their installed manifest can be inspected.
 
 ## Configuration
+
+The current source uses DSH `0.2.1-rc.3` (npm `next`; extension version remains `0.6.1`). In VS Code Settings, `deepseekHarness.webSearchProvider` selects `messages` (default: Messages search with local HTTP retrieval) or `search-api` (native DeepSeek Search and Fetch APIs). Reload the workbench after changing it. The direct APIs use the official DeepSeek credential, independently of the chat provider, and require access on that account. Disabling `deepseekHarness.webSearch` disables both DeepSeek web providers while retaining local HTTP retrieval. As in official DSH, Search API requests may include up to 128 characters of the initiating question.
+
 
 DSH 0.2.1 uses only Messages for DeepSeek Official, at `https://api.deepseek.com/anthropic`. Old hand-written `llm-deepseek.protocol` options must be removed; Chat Completions endpoints belong under a custom provider. Custom-provider protocols remain unchanged.
 

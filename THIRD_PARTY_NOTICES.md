@@ -2,7 +2,7 @@
 
 This platform extension bundle contains:
 
-- `@deepseek-ai/dsh` 0.2.1-alpha.2 and its `@deepseek-ai/dsh-*` dependencies
+- `@deepseek-ai/dsh` 0.2.1-rc.3 and its `@deepseek-ai/dsh-*` dependencies
   - Copyright: DeepSeek contributors
   - License: MIT
   - Source: https://github.com/deepseek-ai/deepseek-harness
@@ -17,12 +17,12 @@ This platform extension bundle contains:
   - License: MIT and included third-party licenses
   - Source: https://github.com/nodejs/node
 
-- `markdown-it` 15.0.0
+- `markdown-it` 15.0.3
   - Copyright: Vitaly Puzrin and Alex Kocharin
   - License: MIT
   - Source: https://github.com/markdown-it/markdown-it
 
-- `DOMPurify` 3.4.13
+- `DOMPurify` 3.4.17
   - Copyright: Cure53 and other contributors
   - License: Apache-2.0 OR MPL-2.0
   - Source: https://github.com/cure53/DOMPurify
