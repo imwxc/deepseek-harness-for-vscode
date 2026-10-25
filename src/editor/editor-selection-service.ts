@@ -44,6 +44,7 @@ export class EditorSelectionService implements vscode.Disposable {
     ]
   }
 
+  /** Captures the active editor selection and refreshes the auto-attach cache. */
   current(): EditorSelectionView | undefined {
     const captured = captureActiveSelection()
     if (captured === undefined) return undefined
@@ -93,10 +94,6 @@ export class EditorSelectionService implements vscode.Disposable {
     }
   }
 
-  /** Releases every pin after the prompt consuming them is accepted. */
-  clearRetained(): void {
-    this.retained.clear()
-  }
 
   dispose(): void {
     if (this.publishTimer !== undefined) clearTimeout(this.publishTimer)
@@ -113,6 +110,7 @@ export class EditorSelectionService implements vscode.Disposable {
   }
 }
 
+/** Reads the active editor selection into a cached view and prompt attachment. */
 function captureActiveSelection(): CachedSelection | undefined {
   const editor = vscode.window.activeTextEditor
   if (editor === undefined || editor.selection.isEmpty) return undefined
@@ -158,6 +156,7 @@ function captureActiveSelection(): CachedSelection | undefined {
   }
 }
 
+/** Returns the workspace-relative display path for a file URI. */
 function displayPath(uri: vscode.Uri): string | undefined {
   if (uri.scheme !== 'file') return undefined
   const folder = vscode.workspace.getWorkspaceFolder(uri)

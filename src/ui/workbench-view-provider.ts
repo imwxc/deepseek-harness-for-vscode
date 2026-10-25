@@ -18,7 +18,7 @@ import type { ConnectionSettingsService } from '../services/connection-settings-
 import { workbenchHtml } from './workbench/view-html.js'
 import { isRecord, isTimeoutError, localizedOption } from './workbench/input-validators.js'
 import { handleWorkbenchMessage } from './workbench/view-messages.js'
-import type { WorkbenchViewActions } from './workbench/view-messages.js'
+import type { SelectionPinRef, WorkbenchViewActions } from './workbench/view-messages.js'
 
 export type { WorkbenchViewActions } from './workbench/view-messages.js'
 
@@ -36,6 +36,8 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
   private publishPending = false
   /** Host-owned explicit pins, shared by the sidebar and the editor panel. */
   private pinnedSelections: EditorSelectionView[] = []
+  private readonly pinRevisions = new Map<string, number>()
+  private nextPinRevision = 0
   private viewReady = false
   private panelReady = false
 
@@ -72,6 +74,7 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
     })]
   }
 
+  /** Resolves the sidebar webview and starts its message/state lifecycle. */
   resolveWebviewView(view: vscode.WebviewView): void {
     // Drag-to-editor re-resolves this view into a fresh webview (and back
     // again). Drop the previous message subscription so a re-resolved view
@@ -103,6 +106,7 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
     void this.gateway.start()
   }
 
+  /** Restarts the Harness gateway and republishes the workbench. */
   async refresh(): Promise<void> {
     await this.gateway.restart()
   }
@@ -113,9 +117,12 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
    */
   pinSelection(selection: EditorSelectionView): void {
     this.editorSelection.retain(selection.id)
+    this.pinRevisions.set(selection.id, ++this.nextPinRevision)
     const next = [...this.pinnedSelections.filter((item) => item.id !== selection.id), selection].slice(-8)
     for (const dropped of this.pinnedSelections) {
-      if (!next.some((item) => item.id === dropped.id)) this.editorSelection.release(dropped.id)
+      if (next.some((item) => item.id === dropped.id)) continue
+      this.pinRevisions.delete(dropped.id)
+      this.editorSelection.release(dropped.id)
     }
     this.pinnedSelections = next
     this.postPinnedSelections()
@@ -124,17 +131,44 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
   /** Removes one pin from the host state and from every open workbench host. */
   unpinSelection(selectionId: string): void {
     this.pinnedSelections = this.pinnedSelections.filter((item) => item.id !== selectionId)
+    this.pinRevisions.delete(selectionId)
     this.editorSelection.release(selectionId)
     this.postPinnedSelections()
   }
 
-  /** Clears pins after a prompt consumes them, releasing their retained text. */
-  clearPinnedSelections(): void {
-    this.pinnedSelections = []
-    this.editorSelection.clearRetained()
+  /** Captures the pin generations consumed by one prompt, ignoring auto-attach cards. */
+  snapshotPins(selectionIds: readonly string[]): readonly SelectionPinRef[] {
+    const refs: SelectionPinRef[] = []
+    for (const id of selectionIds) {
+      const revision = this.pinRevisions.get(id)
+      if (revision !== undefined) refs.push({ id, revision })
+    }
+    return refs
+  }
+
+  /**
+   * Clears the pins consumed by a prompt. With no refs, every pin is cleared;
+   * a pin repinned while the prompt was pending keeps its new generation.
+   */
+  clearPinnedSelections(refs?: readonly SelectionPinRef[]): void {
+    const consumed = new Set<string>()
+    if (refs === undefined) {
+      for (const selection of this.pinnedSelections) consumed.add(selection.id)
+    } else {
+      for (const ref of refs) {
+        if (this.pinRevisions.get(ref.id) === ref.revision) consumed.add(ref.id)
+      }
+    }
+    if (consumed.size === 0) return
+    this.pinnedSelections = this.pinnedSelections.filter((item) => !consumed.has(item.id))
+    for (const id of consumed) {
+      this.pinRevisions.delete(id)
+      this.editorSelection.release(id)
+    }
     this.postPinnedSelections()
   }
 
+  /** Releases subscriptions, the editor panel and historical documents. */
   dispose(): void {
     this.viewSubscription?.dispose()
     for (const subscription of this.subscriptions) subscription.dispose()
@@ -199,7 +233,8 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
         publishState: () => this.publishState(),
         pinSelection: (selection) => this.pinSelection(selection),
         unpinSelection: (selectionId) => this.unpinSelection(selectionId),
-        clearPinnedSelections: () => this.clearPinnedSelections(),
+        snapshotPins: (selectionIds) => this.snapshotPins(selectionIds),
+        clearPinnedSelections: (refs) => this.clearPinnedSelections(refs),
       }, message)
       if (isRecord(message) && message.type === 'ready') {
         if (source === 'view') this.viewReady = true
@@ -223,6 +258,7 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
     }
   }
 
+  /** Posts one message to every existing webview host. */
   private postToHosts(message: unknown): void {
     void this.view?.webview.postMessage(message)
     void this.panel?.webview.postMessage(message)
@@ -242,6 +278,7 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
     }
   }
 
+  /** Queues a serialized workbench snapshot for every host. */
   private publishState(): Promise<void> {
     // Gateway frames can arrive every few milliseconds. Serialize snapshots
     // so an older async credentials read can never overtake a newer state and
@@ -256,6 +293,7 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
     return this.publishing
   }
 
+  /** Drains the latest snapshot while coalescing rapid gateway updates. */
   private async drainPublishQueue(): Promise<void> {
     while (this.publishPending) {
       this.publishPending = false
@@ -277,6 +315,7 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
     }
   }
 
+  /** Publishes the current editor selection to every host. */
   private async publishEditorSelection(): Promise<void> {
     await this.postToHosts({
       type: 'editorSelection',

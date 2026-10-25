@@ -116,4 +116,26 @@ describe('editor context selection staging', () => {
     f.component.setPinnedSelections([first])
     expect(f.component.input().selectionIds).toEqual(['selection-1'])
   })
+
+  it('restores the auto card after the matching pin is consumed', () => {
+    const f = fixture()
+    f.component.setAutoAttach(true)
+    f.component.updateSelection(first)
+    f.component.setPinnedSelections([first])
+    expect(f.component.input().selectionIds).toEqual(['selection-1'])
+    f.component.setPinnedSelections([])
+    expect(f.component.input().selectionIds).toEqual(['selection-1'])
+    expect(document.querySelectorAll('#editor-context-list .selection-context-chip')).toHaveLength(1)
+  })
+
+  it('does not displace an explicit pin when disabling auto-attach with eight pins', () => {
+    const f = fixture()
+    const pins = Array.from({ length: 8 }, (_, index) => selection(`pin-${index}`, `src/pin-${index}.ts`, index + 1))
+    f.component.setPinnedSelections(pins)
+    f.component.setAutoAttach(true)
+    f.component.updateSelection(third)
+    f.component.setAutoAttach(false)
+    expect(f.onPinSelection).not.toHaveBeenCalled()
+    expect(f.component.input().selectionIds).toEqual(pins.map((item) => item.id))
+  })
 })

@@ -74,21 +74,30 @@ export function createEditorContextComponent(options: EditorContextComponentOpti
     render()
   }
 
-  /** Replaces the host-owned pin list and drops an auto card now represented there. */
+  /** Replaces the host-owned pin list, dropping a duplicate auto card or restoring one after consumption. */
   const setPinnedSelections = (selections: readonly EditorSelectionView[]): void => {
     pinnedSelections = selections.slice(0, MAX_SELECTIONS)
     if (autoSelection !== undefined && pinnedSelections.some((item) => item.id === autoSelection?.id)) {
       autoSelection = undefined
+    } else if (autoSelection === undefined && autoAttach && availableSelection !== undefined
+      && availableSelection.id !== ignoredSelectionId
+      && !pinnedSelections.some((item) => item.id === availableSelection?.id)) {
+      // The pin that replaced the automatic card was consumed; show the
+      // still-active selection again instead of silently dropping it.
+      autoSelection = availableSelection
     }
     render()
   }
 
-  /** Toggles follow-the-selection mode, converting the current card into a host-owned pin. */
+  /** Toggles follow-the-selection mode, pinning the current card only when it has a free slot. */
   const setAutoAttach = (enabled: boolean): void => {
     const changed = enabled !== autoAttach
     autoAttach = enabled
     if (changed && !enabled && autoSelection !== undefined) {
-      options.onPinSelection(autoSelection.id)
+      const pinned = pinnedSelections.some((item) => item.id === autoSelection?.id)
+      if (pinned) autoSelection = undefined
+      else if (pinnedSelections.length < MAX_SELECTIONS) options.onPinSelection(autoSelection.id)
+      else autoSelection = undefined
     } else if (changed && enabled && availableSelection !== undefined && availableSelection.id !== ignoredSelectionId) {
       autoSelection = availableSelection
     }
@@ -215,12 +224,14 @@ export function createEditorContextComponent(options: EditorContextComponentOpti
   }
 }
 
+/** Returns a required element by id or fails the component initialization. */
 function requiredElement(document: Document, id: string): HTMLElement {
   const element = document.getElementById(id)
   if (element === null) throw new Error(`Missing #${id}`)
   return element
 }
 
+/** Returns a required button element by id or fails the component initialization. */
 function requiredButton(document: Document, id: string): HTMLButtonElement {
   const element = document.getElementById(id)
   if (!(element instanceof HTMLButtonElement)) throw new Error(`Missing button #${id}`)

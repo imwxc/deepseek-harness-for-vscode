@@ -33,18 +33,16 @@ function selection(id: string): EditorSelectionView {
 }
 
 function fixture() {
-  let mcpServers: unknown = []
   const viewPost = vi.fn()
   const panelPost = vi.fn()
   const editorSelection = {
     retain: vi.fn(),
     release: vi.fn(),
-    clearRetained: vi.fn(),
     onDidChange: () => ({ dispose: () => undefined }),
   }
   const gateway = { onDidChange: () => ({ dispose: () => undefined }), start: vi.fn() }
   const configuration = {
-    get: () => ({ mcpServers }),
+    get: () => ({ mcpServers: [] }),
     onDidChange: () => ({ dispose: () => undefined }),
   }
   const provider = new WorkbenchViewProvider(
@@ -59,7 +57,6 @@ function fixture() {
   )
   ;(provider as unknown as { view: unknown }).view = { webview: { postMessage: viewPost } }
   ;(provider as unknown as { panel: unknown }).panel = { webview: { postMessage: panelPost } }
-  mcpServers = []
   return { provider, editorSelection, viewPost, panelPost }
 }
 
@@ -98,9 +95,31 @@ describe('host-owned selection pins', () => {
     expect(f.panelPost).toHaveBeenLastCalledWith({ type: 'pinnedSelections', selections: [selection('b')] })
 
     f.provider.clearPinnedSelections()
-    expect(f.editorSelection.clearRetained).toHaveBeenCalledOnce()
+    expect(f.editorSelection.release.mock.calls.map(([id]) => id)).toEqual(['a', 'b'])
     expect(f.viewPost).toHaveBeenLastCalledWith({ type: 'pinnedSelections', selections: [] })
     expect(f.panelPost).toHaveBeenLastCalledWith({ type: 'pinnedSelections', selections: [] })
+  })
+
+  it('clears only the pin generations consumed by one prompt', () => {
+    const f = fixture()
+    ;(f.provider as unknown as { viewReady: boolean }).viewReady = true
+    f.provider.pinSelection(selection('a'))
+    f.provider.pinSelection(selection('b'))
+    const consumed = f.provider.snapshotPins(['a'])
+    f.provider.clearPinnedSelections(consumed)
+    expect(f.viewPost).toHaveBeenLastCalledWith({ type: 'pinnedSelections', selections: [selection('b')] })
+    expect(f.editorSelection.release).toHaveBeenCalledExactlyOnceWith('a')
+  })
+
+  it('does not clear a pin repinned while the prompt is pending', () => {
+    const f = fixture()
+    ;(f.provider as unknown as { viewReady: boolean }).viewReady = true
+    f.provider.pinSelection(selection('a'))
+    const consumed = f.provider.snapshotPins(['a'])
+    f.provider.pinSelection(selection('a'))
+    f.provider.clearPinnedSelections(consumed)
+    expect(f.viewPost).toHaveBeenLastCalledWith({ type: 'pinnedSelections', selections: [selection('a')] })
+    expect(f.editorSelection.release).not.toHaveBeenCalled()
   })
 
   it('retains new pins and releases the oldest when the ninth arrives', () => {
