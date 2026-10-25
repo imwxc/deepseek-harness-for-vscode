@@ -5,6 +5,8 @@ interface EditorContextComponentOptions {
   readonly document: Document
   readonly translate: (key: WebviewMessageKey, args?: MessageArguments) => string
   readonly onRequestSelection: () => void
+  readonly onPinSelection: (selectionId: string) => void
+  readonly onUnpinSelection: (selectionId: string) => void
   readonly onOpenFile: (reference: { readonly id?: string; readonly path?: string; readonly line?: number }) => void
 }
 
@@ -15,40 +17,39 @@ export interface PromptContextInput {
 
 export interface EditorContextComponent {
   readonly updateSelection: (selection: EditorSelectionView | undefined) => void
-  readonly attachSelection: (selection: EditorSelectionView) => void
+  readonly setPinnedSelections: (selections: readonly EditorSelectionView[]) => void
   readonly setAutoAttach: (enabled: boolean) => void
   readonly addFile: (file: WorkspaceFileView) => void
   readonly input: () => PromptContextInput
   readonly markSubmitted: () => void
 }
 
-/** Renders removable selection/@file chips and owns their staged state. */
+/**
+ * Renders removable selection/@file chips. Explicit pins are host-owned and
+ * arrive through `setPinnedSelections`; this component owns only the one
+ * auto-attach card that follows the active selection.
+ */
 export function createEditorContextComponent(options: EditorContextComponentOptions): EditorContextComponent {
   const root = requiredElement(options.document, 'editor-context-list')
   const attach = requiredButton(options.document, 'attach-selection')
   const MAX_SELECTIONS = 8
   let availableSelection: EditorSelectionView | undefined
   let autoSelection: EditorSelectionView | undefined
-  let explicitSelections: EditorSelectionView[] = []
+  let pinnedSelections: readonly EditorSelectionView[] = []
   let files: WorkspaceFileView[] = []
   let autoAttach = false
   let ignoredSelectionId: string | undefined
   let attachRequested = false
 
+  /** Explicit pins take priority; the moving auto card only fills spare slots. */
   const selectedSelections = (): EditorSelectionView[] => {
-    const result: EditorSelectionView[] = []
-    for (const selection of [...explicitSelections, ...(autoSelection === undefined ? [] : [autoSelection])]) {
-      if (!result.some((item) => item.id === selection.id)) result.push(selection)
+    const explicit = pinnedSelections.slice(0, MAX_SELECTIONS)
+    if (explicit.length >= MAX_SELECTIONS) return explicit
+    const result = [...explicit]
+    if (autoSelection !== undefined && !result.some((item) => item.id === autoSelection?.id)) {
+      result.push(autoSelection)
     }
-    // Keep the newest explicit pins; the moving auto selection is appended
-    // last so it survives when the explicit list is already full.
-    return result.slice(-MAX_SELECTIONS)
-  }
-
-  const addExplicitSelection = (selection: EditorSelectionView): void => {
-    explicitSelections = [...explicitSelections.filter((item) => item.id !== selection.id), selection].slice(-MAX_SELECTIONS)
-    if (autoSelection?.id === selection.id) autoSelection = undefined
-    ignoredSelectionId = undefined
+    return result
   }
 
   attach.addEventListener('click', () => {
@@ -57,44 +58,44 @@ export function createEditorContextComponent(options: EditorContextComponentOpti
       options.onRequestSelection()
       return
     }
-    addExplicitSelection(availableSelection)
-    render()
+    options.onPinSelection(availableSelection.id)
   })
 
+  /** Applies the active selection, moving the auto card and satisfying a pending attach request. */
   const updateSelection = (selection: EditorSelectionView | undefined): void => {
     const changed = selection?.id !== availableSelection?.id
     availableSelection = selection
-    if (selection !== undefined && attachRequested) {
-      addExplicitSelection(selection)
-    } else if (selection !== undefined && changed && autoAttach && selection.id !== ignoredSelectionId) {
+    if (selection !== undefined && !attachRequested && changed && autoAttach && selection.id !== ignoredSelectionId) {
       // Auto-attach follows the active selection (one chip that moves with the
-      // cursor); explicit right-click adds stay pinned alongside it.
+      // cursor); explicit pins stay put beside it.
       autoSelection = selection
     }
     attachRequested = false
     render()
   }
 
-  const attachSelection = (selection: EditorSelectionView): void => {
-    availableSelection = selection
-    addExplicitSelection(selection)
-    attachRequested = false
+  /** Replaces the host-owned pin list and drops an auto card now represented there. */
+  const setPinnedSelections = (selections: readonly EditorSelectionView[]): void => {
+    pinnedSelections = selections.slice(0, MAX_SELECTIONS)
+    if (autoSelection !== undefined && pinnedSelections.some((item) => item.id === autoSelection?.id)) {
+      autoSelection = undefined
+    }
     render()
   }
 
+  /** Toggles follow-the-selection mode, converting the current card into a host-owned pin. */
   const setAutoAttach = (enabled: boolean): void => {
     const changed = enabled !== autoAttach
     autoAttach = enabled
     if (changed && !enabled && autoSelection !== undefined) {
-      // Turning auto-attach off keeps the current chip as an explicit one.
-      addExplicitSelection(autoSelection)
-      autoSelection = undefined
+      options.onPinSelection(autoSelection.id)
     } else if (changed && enabled && availableSelection !== undefined && availableSelection.id !== ignoredSelectionId) {
       autoSelection = availableSelection
     }
     render()
   }
 
+  /** Paints selection and file chips, including the attach-button state. */
   const render = (): void => {
     const fragment = options.document.createDocumentFragment()
     const selections = selectedSelections()
@@ -106,6 +107,7 @@ export function createEditorContextComponent(options: EditorContextComponentOpti
     attach.setAttribute('aria-pressed', String(selections.length > 0))
   }
 
+  /** Builds one removable selection chip; removal is delegated to the host. */
   const selectionChip = (selection: EditorSelectionView): HTMLElement => {
     const chip = chipShell('selection-context-chip')
     const open = options.document.createElement('button')
@@ -126,7 +128,7 @@ export function createEditorContextComponent(options: EditorContextComponentOpti
       open.addEventListener('click', () => options.onOpenFile({ path: selectionFile, line: selection.startLine }))
     }
     chip.append(open, removeButton(options.translate('removeSelectionContext'), () => {
-      explicitSelections = explicitSelections.filter((item) => item.id !== selection.id)
+      if (pinnedSelections.some((item) => item.id === selection.id)) options.onUnpinSelection(selection.id)
       if (autoSelection?.id === selection.id) {
         ignoredSelectionId = selection.id
         autoSelection = undefined
@@ -136,6 +138,7 @@ export function createEditorContextComponent(options: EditorContextComponentOpti
     return chip
   }
 
+  /** Builds one removable @file chip. */
   const fileChip = (file: WorkspaceFileView): HTMLElement => {
     const chip = chipShell('file-context-chip')
     const open = options.document.createElement('button')
@@ -151,18 +154,21 @@ export function createEditorContextComponent(options: EditorContextComponentOpti
     return chip
   }
 
+  /** Creates the shared article shell for context chips. */
   const chipShell = (kind: string): HTMLElement => {
     const chip = options.document.createElement('article')
     chip.className = `editor-context-chip ${kind}`
     return chip
   }
 
+  /** Builds the two-line label/detail block used inside chips. */
   const contextCopy = (label: string, detail: string): HTMLElement => {
     const copy = text('span', 'editor-context-copy')
     copy.append(text('strong', '', label), text('small', '', detail))
     return copy
   }
 
+  /** Builds the × control used to remove a chip. */
   const removeButton = (label: string, onRemove: () => void): HTMLButtonElement => {
     const button = options.document.createElement('button')
     button.type = 'button'
@@ -174,6 +180,7 @@ export function createEditorContextComponent(options: EditorContextComponentOpti
     return button
   }
 
+  /** Creates a text element with optional class and content. */
   const text = (tag: string, className: string, value = ''): HTMLElement => {
     const element = options.document.createElement(tag)
     element.className = className
@@ -183,18 +190,21 @@ export function createEditorContextComponent(options: EditorContextComponentOpti
 
   return {
     updateSelection,
-    attachSelection,
+    setPinnedSelections,
     setAutoAttach,
+    /** Adds one @file chip, keeping at most eight. */
     addFile: (file) => {
       if (!files.some((item) => item.id === file.id)) files = [...files, file].slice(-8)
       render()
     },
+    /** Returns the selection and file ids to send with the prompt. */
     input: () => ({
       selectionIds: selectedSelections().map((selection) => selection.id),
       fileIds: files.map((file) => file.id),
     }),
+    /** Clears transient input after sending; explicit pins are host-owned. */
     markSubmitted: () => {
-      explicitSelections = []
+      // The host clears explicit pins only after the prompt is accepted.
       if (!autoAttach) {
         ignoredSelectionId = autoSelection?.id
         autoSelection = undefined

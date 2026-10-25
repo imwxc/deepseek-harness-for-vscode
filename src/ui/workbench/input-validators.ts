@@ -105,6 +105,7 @@ export function safeExternalUri(raw: string): vscode.Uri | undefined {
   return undefined
 }
 
+/** Parses prompt context from a webview message; accepts selectionIds[] and the legacy selectionId. */
 export function promptContextInput(value: unknown): { readonly selectionIds: readonly string[]; readonly fileIds: readonly string[] } | undefined {
   if (!isRecord(value)) return undefined
   const selectionIds = Array.isArray(value.selectionIds)

@@ -101,13 +101,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     },
   )
 
+  /** Pins the active editor selection and reveals the workbench composer. */
   const addSelectionToChat = async (): Promise<void> => {
     const selection = editorSelection.current()
     if (selection === undefined) {
       void vscode.window.showInformationMessage(vscode.l10n.t('Select code in an editor first.'))
       return
     }
-    provider.attachSelection(selection)
+    provider.pinSelection(selection)
     await focusWorkbench()
   }
 

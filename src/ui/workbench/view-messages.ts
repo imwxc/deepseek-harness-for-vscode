@@ -11,6 +11,7 @@ import type { ConnectionSettingsInput, ConnectionTestResult } from '../../domain
 import { promptConfiguration } from '../../domain/prompt-configuration.js'
 import { referenceFromKey as fileReferenceFromKey } from '../../webview/file-reference.js'
 import type { EditorSelectionService } from '../../editor/editor-selection-service.js'
+import type { EditorSelectionView } from '../../editor/types.js'
 import type { WorkspaceFileService } from '../../editor/workspace-file-service.js'
 import type { HarnessGatewayService } from '../../gateway/harness-gateway-service.js'
 import type { DshPluginCenterController } from '../../plugins/plugin-center-controller.js'
@@ -41,6 +42,9 @@ export interface WorkbenchMessageContext {
   readonly workspaceFiles: WorkspaceFileService
   readonly postToHosts: (message: unknown) => void
   readonly publishState: () => Promise<void>
+  readonly pinSelection: (selection: EditorSelectionView) => void
+  readonly unpinSelection: (selectionId: string) => void
+  readonly clearPinnedSelections: () => void
 }
 
 export interface WorkbenchViewActions {
@@ -191,6 +195,7 @@ export interface WorkbenchViewActions {
           signals,
           requestId,
         )
+        ctx.clearPinnedSelections()
       } catch (cause) {
         // The prompt never entered the queue: tell the webview to roll back
         // its optimistic echo so the failed message does not linger as if it
@@ -276,9 +281,19 @@ export interface WorkbenchViewActions {
       await ctx.postToHosts({ type: 'editorSelection', selection })
       if (selection === undefined) {
         void vscode.window.showInformationMessage(vscode.l10n.t('Select code in an editor first.'))
+      } else {
+        ctx.pinSelection(selection)
       }
       break
     }
+    case 'pinSelection': {
+      const selection = ctx.editorSelection.view(requiredString(value, 'selectionId'))
+      if (selection !== undefined) ctx.pinSelection(selection)
+      break
+    }
+    case 'unpinSelection':
+      ctx.unpinSelection(requiredString(value, 'selectionId'))
+      break
     case 'loadCommands':
       await ctx.gateway.refreshCommands()
       break

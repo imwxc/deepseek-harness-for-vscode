@@ -26,6 +26,8 @@ export class EditorSelectionService implements vscode.Disposable {
   private readonly changeEmitter = new vscode.EventEmitter<EditorSelectionView | undefined>()
   private readonly subscriptions: vscode.Disposable[]
   private readonly cached = new Map<string, CachedSelection>()
+  /** Explicitly pinned selections never evict while their composer card exists. */
+  private readonly retained = new Map<string, CachedSelection>()
   private publishTimer: NodeJS.Timeout | undefined
 
   readonly onDidChange = this.changeEmitter.event
@@ -45,12 +47,16 @@ export class EditorSelectionService implements vscode.Disposable {
   current(): EditorSelectionView | undefined {
     const captured = captureActiveSelection()
     if (captured === undefined) return undefined
-    this.cached.delete(captured.view.id)
-    this.cached.set(captured.view.id, captured)
-    while (this.cached.size > MAX_CACHED_SELECTIONS) {
-      const oldest = this.cached.keys().next().value as string | undefined
-      if (oldest === undefined) break
-      this.cached.delete(oldest)
+    // A retained selection already has a stable copy; a later cursor move must
+    // not make it evictable again.
+    if (!this.retained.has(captured.view.id)) {
+      this.cached.delete(captured.view.id)
+      this.cached.set(captured.view.id, captured)
+      while (this.cached.size > MAX_CACHED_SELECTIONS) {
+        const oldest = this.cached.keys().next().value as string | undefined
+        if (oldest === undefined) break
+        this.cached.delete(oldest)
+      }
     }
     return captured.view
   }
@@ -58,7 +64,38 @@ export class EditorSelectionService implements vscode.Disposable {
   /** Resolves an opaque selection token without trusting Webview-supplied text. */
   attachment(id: string | undefined): PromptAttachment | undefined {
     if (id === undefined) return undefined
-    return this.cached.get(id)?.attachment
+    return (this.retained.get(id) ?? this.cached.get(id))?.attachment
+  }
+
+  /** Returns the display metadata for an id previously published to the Webview. */
+  view(id: string): EditorSelectionView | undefined {
+    return (this.retained.get(id) ?? this.cached.get(id))?.view
+  }
+
+  /** Keeps one explicitly pinned selection resolvable until it is unpinned or sent. */
+  retain(id: string): void {
+    const entry = this.cached.get(id) ?? this.retained.get(id)
+    if (entry === undefined) return
+    this.cached.delete(id)
+    this.retained.set(id, entry)
+  }
+
+  /** Releases one pin, returning it to the auto-attached cache for reuse. */
+  release(id: string): void {
+    const entry = this.retained.get(id)
+    if (entry === undefined) return
+    this.retained.delete(id)
+    this.cached.set(id, entry)
+    while (this.cached.size > MAX_CACHED_SELECTIONS) {
+      const oldest = this.cached.keys().next().value as string | undefined
+      if (oldest === undefined) break
+      this.cached.delete(oldest)
+    }
+  }
+
+  /** Releases every pin after the prompt consuming them is accepted. */
+  clearRetained(): void {
+    this.retained.clear()
   }
 
   dispose(): void {
