@@ -12,7 +12,7 @@
     "url": "https://github.com/skymecode/deepseek-harness-for-vscode.git"
   },
   "engines": {
-    "vscode": "^1.101.0"
+    "vscode": "^1.106.0"
   },
   "categories": [
     "Machine Learning",
@@ -84,7 +84,7 @@
       }
     ],
     "viewsContainers": {
-      "activitybar": [
+      "secondarySidebar": [
         {
           "id": "deepseekHarness",
           "title": "DeepSeek Harness for Visual Studio Code",
