@@ -1,6 +1,6 @@
 # 更新日志
 
-## 未发布
+## 0.6.2
 
 - 对话视图容器从活动栏（左侧）改为贡献到右侧辅助侧边栏（Secondary Side Bar），与 VS Code 内置 Chat 同位；`打开工作台` 命令与 `Cmd/Ctrl+Alt+H` 位置不变，只是落点在右侧。`contributes.viewsContainers.secondarySidebar` 自 VS Code `1.106` 起脱离 Proposed API，因此 `engines.vscode` 由 `^1.101.0` 提升至 `^1.106.0`。
 - 新增显示控制设置：`deepseekHarness.transcriptView`（compact/standard/detailed/verbose 四档显示密度，默认 standard）、`deepseekHarness.collapseTiming`（过程段收起时机 afterTurnEnd/nextMessage）、`deepseekHarness.showThinking` 与 `deepseekHarness.showToolCalls`（思考段/工具调用段开关）；设置变更即时生效无需刷新，用户手动开合状态优先保留。
