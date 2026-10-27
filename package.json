@@ -2,7 +2,7 @@
   "name": "deepseek-harness-for-vscode",
   "displayName": "DeepSeek Harness for Visual Studio Code",
   "description": "%extension.description%",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "type": "module",
   "publisher": "skymecode",
   "license": "MIT",
@@ -129,8 +129,7 @@
       {
         "command": "deepseekHarness.openChat",
         "key": "ctrl+alt+h",
-        "mac": "cmd+alt+h",
-        "when": "!inChat"
+        "mac": "cmd+alt+h"
       }
     ],
     "configuration": {

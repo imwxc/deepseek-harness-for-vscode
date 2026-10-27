@@ -1,5 +1,9 @@
 # 更新日志
 
+## 0.6.3
+
+- `Cmd/Ctrl+Alt+H` 去掉 `!inChat` 条件：视图与内置 Chat 同处右侧辅助侧边栏，焦点落在内置 Chat 里时 `inChat` 为真，原条件会让快捷键静默失效。
+
 ## 0.6.2
 
 - 对话视图容器从活动栏（左侧）改为贡献到右侧辅助侧边栏（Secondary Side Bar），与 VS Code 内置 Chat 同位；`打开工作台` 命令与 `Cmd/Ctrl+Alt+H` 位置不变，只是落点在右侧。`contributes.viewsContainers.secondarySidebar` 自 VS Code `1.106` 起脱离 Proposed API，因此 `engines.vscode` 由 `^1.101.0` 提升至 `^1.106.0`。
