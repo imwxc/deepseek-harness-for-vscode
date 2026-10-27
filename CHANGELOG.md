@@ -2,6 +2,8 @@
 
 ## 未发布
 
+- 对话视图容器从活动栏（左侧）改为贡献到右侧辅助侧边栏（Secondary Side Bar），与 VS Code 内置 Chat 同位；`打开工作台` 命令与 `Cmd/Ctrl+Alt+H` 位置不变，只是落点在右侧。`contributes.viewsContainers.secondarySidebar` 自 VS Code `1.106` 起脱离 Proposed API，因此 `engines.vscode` 由 `^1.101.0` 提升至 `^1.106.0`。
+- `Cmd/Ctrl+Alt+H` 去掉 `!inChat` 条件：新布局下该快捷键与内置 Chat 同处一条侧栏，焦点在内置 Chat 里时原条件会让快捷键静默失效。
 - 适配新版 JSONL 历史存储插件的具名导出，保留旧会话迁移、原文件保护和共享历史恢复能力。
 - 保留历史正文搜索：新版默认关闭全文索引，扩展显式采用首次搜索时初始化的内存索引，不改写会话日志。
 - 新增 `deepseekHarness.webSearchProvider` 设置，可选择原有 Messages 搜索或 DSH 原生 Search/Fetch API；关闭 `webSearch` 时同时禁用两种 DeepSeek 提供者，网页抓取回退到原生本地 HTTP。

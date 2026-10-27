@@ -33,7 +33,7 @@ Stability and the upgrade experience for existing users take priority over alway
 
 ## Features
 
-- **Native VS Code workbench** — all interaction happens in the sidebar; the local Harness Gateway exposes only the loopback API transport, while the official WebUI is neither served nor embedded.
+- **Native VS Code workbench** — all interaction happens in the Secondary Side Bar (the right-hand bar that hosts VS Code's own Chat view); the local Harness Gateway exposes only the loopback API transport, while the official WebUI is neither served nor embedded.
 - **First-run guidance** — an unconfigured key shows a three-step setup hint with a direct link to connection settings; isolated worktrees keep their merge policy visible.
 - **Shared local history** — the bundled runtime and an independently installed official DSH can read the same saved conversations. Installing the official CLI is optional; credentials and plugin profiles stay separate.
 - **Detachable workbench** — open the same synchronized conversation UI in an editor-area panel and move it to another VS Code window when more space is needed.
@@ -189,7 +189,7 @@ Automatically attached selections are limited to 16 KB and are truncated when ne
 
 | Command                                              | Description                               |
 | ---------------------------------------------------- | ----------------------------------------- |
-| `DeepSeek Harness: Open Workbench`                   | Open the sidebar workbench                |
+| `DeepSeek Harness: Open Workbench`                   | Open the workbench in the Secondary Side Bar |
 | `DeepSeek Harness: Open Workbench in New Window`     | Open the detachable editor-area workbench |
 | `DeepSeek Harness: Reload Workbench`                 | Restart the runtime and reconnect         |
 | `DeepSeek Harness: Set API Key`                      | Save the API Key                          |
