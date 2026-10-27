@@ -261,6 +261,46 @@
           "default": "never",
           "description": "%config.worktreeAutoMerge%"
         },
+        "deepseekHarness.transcriptView": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "standard",
+            "detailed",
+            "verbose"
+          ],
+          "enumDescriptions": [
+            "%config.transcriptView.compact%",
+            "%config.transcriptView.standard%",
+            "%config.transcriptView.detailed%",
+            "%config.transcriptView.verbose%"
+          ],
+          "default": "standard",
+          "description": "%config.transcriptView%"
+        },
+        "deepseekHarness.collapseTiming": {
+          "type": "string",
+          "enum": [
+            "afterTurnEnd",
+            "nextMessage"
+          ],
+          "enumDescriptions": [
+            "%config.collapseTiming.afterTurnEnd%",
+            "%config.collapseTiming.nextMessage%"
+          ],
+          "default": "afterTurnEnd",
+          "description": "%config.collapseTiming%"
+        },
+        "deepseekHarness.showThinking": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.showThinking%"
+        },
+        "deepseekHarness.showToolCalls": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.showToolCalls%"
+        },
         "deepseekHarness.mcpServers": {
           "type": "string",
           "default": "[]",
