@@ -297,7 +297,9 @@ function renderToolSummaryRow(item: ChatItem): HTMLElement {
  */
 function applyDisclosureDefaults(level: TranscriptViewLevel): void {
   const openToolCards = toolCardsOpenByDefault(level)
-  for (const card of Array.from(elements.messages.querySelectorAll<HTMLDetailsElement>('.tool-card'))) {
+  // Live todo cards (autoOpen='true') stay open at every density; only generic
+  // tool call cards follow the level's default.
+  for (const card of Array.from(elements.messages.querySelectorAll<HTMLDetailsElement>('.tool-card:not(.todo-card)'))) {
     card.dataset.autoOpen = openToolCards ? 'true' : 'false'
     card.open = openToolCards
   }
