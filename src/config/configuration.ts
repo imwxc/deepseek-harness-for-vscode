@@ -19,6 +19,12 @@ import {
   providerRoute,
   type CustomProvider,
 } from '../domain/provider.js'
+import {
+  transcriptViewLevel,
+  turnCollapseTiming,
+  type TranscriptViewLevel,
+  type TurnCollapseTiming,
+} from '../domain/transcript-view.js'
 import { parseMcpServers, type McpServerConfiguration } from './mcp.js'
 
 export type PermissionMode = PermissionPresetId
@@ -50,6 +56,14 @@ export interface HarnessConfiguration {
   readonly experimentalAutoEffort: boolean
   /** Whether an isolated session merges back to the main checkout on turn end. */
   readonly worktreeAutoMerge: WorktreeAutoMergeMode
+  /** Transcript display density aligned with the official Web GUI transcriptView. */
+  readonly transcriptView: TranscriptViewLevel
+  /** When a completed turn's process collapses into its one-line disclosure. */
+  readonly collapseTiming: TurnCollapseTiming
+  /** Whether reasoning/thinking blocks render in the transcript. */
+  readonly showThinking: boolean
+  /** Whether tool call cards render in the transcript. */
+  readonly showToolCalls: boolean
   /** External MCP servers injected into the generated DSH profile overlay. */
   readonly mcpServers?: readonly McpServerConfiguration[]
 }
@@ -85,6 +99,10 @@ export class ConfigurationService implements vscode.Disposable {
       autoAttachSelection: config.get<boolean>('autoAttachSelection', true),
       experimentalAutoEffort: config.get<boolean>('experimentalAutoEffort', false),
       worktreeAutoMerge: worktreeAutoMergeMode(config.get<string>('worktreeAutoMerge')),
+      transcriptView: transcriptViewLevel(config.get<string>('transcriptView')),
+      collapseTiming: turnCollapseTiming(config.get<string>('collapseTiming')),
+      showThinking: config.get<boolean>('showThinking', true),
+      showToolCalls: config.get<boolean>('showToolCalls', true),
       mcpServers: parseMcpServers(config.get<string>('mcpServers', '[]')),
     }
   }

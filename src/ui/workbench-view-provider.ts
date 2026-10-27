@@ -21,6 +21,14 @@ import type { WorkbenchViewActions } from './workbench/view-messages.js'
 
 export type { WorkbenchViewActions } from './workbench/view-messages.js'
 
+/** Display-only settings: a change re-publishes state so the webview re-renders without a runtime restart. */
+const TRANSCRIPT_VIEW_SETTING_KEYS = [
+  'deepseekHarness.transcriptView',
+  'deepseekHarness.collapseTiming',
+  'deepseekHarness.showThinking',
+  'deepseekHarness.showToolCalls',
+] as const
+
 /** Native Codex/Cline-style workbench. No Harness page or iframe is embedded. */
 export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   static readonly viewType = 'deepseekHarness.chatView'
@@ -48,7 +56,13 @@ export class WorkbenchViewProvider implements vscode.WebviewViewProvider, vscode
     this.subscriptions = [gateway.onDidChange(() => {
       void this.publishState().catch(() => undefined)
     }), vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration('deepseekHarness.worktreeAutoMerge')) void this.publishState().catch(() => undefined)
+      // Transcript display settings are pure presentation: re-publish the
+      // current state instead of restarting the gateway, and already-rendered
+      // history updates without a webview reload.
+      if (event.affectsConfiguration('deepseekHarness.worktreeAutoMerge')
+        || TRANSCRIPT_VIEW_SETTING_KEYS.some((key) => event.affectsConfiguration(key))) {
+        void this.publishState().catch(() => undefined)
+      }
     }), configuration.onDidChange((next) => {
       const nextMcpSignature = JSON.stringify(next.mcpServers ?? [])
       if (nextMcpSignature === mcpSignature) return

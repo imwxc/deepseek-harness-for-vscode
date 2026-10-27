@@ -188,7 +188,7 @@ function payload(
     webSearch: true,
     autoAttachSelection: true,
     experimentalAutoEffort: false,
-    worktreeAutoMerge: 'never',
+    worktreeAutoMerge: 'never', transcriptView: 'standard', collapseTiming: 'afterTurnEnd', showThinking: true, showToolCalls: true,
   }
   const active: ActiveSessionView = {
     id: 'session-1',

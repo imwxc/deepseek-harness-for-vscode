@@ -3,6 +3,14 @@ import { splitCarriedBlocks } from '../../domain/carry-over.js'
 import { projectProcessingStatus } from '../../domain/processing-status.js'
 import { projectReasoningTimeline } from '../../domain/reasoning-timeline.js'
 import { projectTurnProcesses } from '../../domain/turn-process.js'
+import {
+  applyTranscriptViewFilters,
+  compactToolRows,
+  processGroupsOpenByDefault,
+  toolCardsOpenByDefault,
+  transcriptViewPreferences,
+  type TranscriptViewLevel,
+} from '../../domain/transcript-view.js'
 import { visibleTranscript } from '../../domain/transcript-context.js'
 import { reconcileOptimisticPrompts } from '../../domain/optimistic-prompts.js'
 import { createContextNotice } from '../runtime-context/notice.js'
@@ -12,7 +20,7 @@ import { ProcessingIndicator } from '../processing-indicator/component.js'
 import { retryStatusText, activityPhrases } from '../processing-indicator/labels.js'
 import { ReasoningTimeline } from '../reasoning-timeline/component.js'
 import { TurnProcessComponent } from '../turn-process/component.js'
-import { createToolCardHeader } from '../tool-card/header.js'
+import { createToolCardHeader, createToolRow } from '../tool-card/header.js'
 import {
   components,
   elements,
@@ -43,6 +51,8 @@ import {
 
 const messageReconciler = new MessageReconciler()
 const turnProcess = new TurnProcessComponent(document, t)
+/** Transcript density last applied to the rendered nodes; drives reset-on-change. */
+let appliedViewLevel: TranscriptViewLevel | undefined
 const processingIndicator = new ProcessingIndicator({
   document, accessibleLabel: t('processing'), phrases: activityPhrases(t),
   retryLabel: (retry) => retryStatusText(retry, t),
@@ -70,12 +80,16 @@ export function renderMessages(active: ActiveSessionView | undefined): void {
   setOptimisticBubbles(reconciled.pending)
   const running = active?.running ?? false
   const rawMessages = reconciled.messages
+  // Display preferences are a view over the transcript: hidden reasoning or
+  // tool items come straight back when the reader flips a setting back on.
+  const view = transcriptViewPreferences(payload?.configuration)
+  const visibleMessages = applyTranscriptViewFilters(rawMessages, view)
   const processing = projectProcessingStatus(active, rawMessages, payload?.state.phase, optimisticBubbles.length > 0)
-  const presentation = projectTurnProcesses(rawMessages, running)
+  const presentation = projectTurnProcesses(visibleMessages, running, { collapseTiming: view.collapseTiming })
   const messages = settleRunningDurations(presentation.messages, running)
   const conclusionId = latestConclusionId(messages)
   messageReconciler.reconcile(elements.messages, sessionId, messages, {
-    groups: turnProcess.prepare(sessionId, presentation.groups),
+    groups: turnProcess.prepare(sessionId, presentation.groups, processGroupsOpenByDefault(view.level)),
     tail: processingIndicator.element,
     create: (item) => renderMessage(item),
     patch: patchStreamingMessage,
@@ -85,7 +99,14 @@ export function renderMessages(active: ActiveSessionView | undefined): void {
       return replacement
     },
     release: (element) => components.streamingMessage.dispose(element),
-  })
+  }, { signatureSuffix: view.level })
+  // A density switch re-applies the new level's disclosure defaults to nodes
+  // that were patched (not replaced) above, e.g. reasoning blocks inside live
+  // assistant articles. Afterwards the reader's own toggles keep winning.
+  if (appliedViewLevel !== view.level) {
+    appliedViewLevel = view.level
+    applyDisclosureDefaults(view.level)
+  }
   // The copy button only survives on the finished conclusion; remove any that
   // are stale (streaming moved on, turn restarted, or a new conclusion
   // replaced the old one).
@@ -215,9 +236,21 @@ function renderMessage(item: ChatItem): HTMLElement {
 
 function renderTool(item: ChatItem): HTMLElement {
   if (isTodoTool(item.title)) return renderTodoCard(item)
+  const level = transcriptViewPreferences(payload?.configuration).level
+  // compact density squeezes each tool call to a one-line summary row: no
+  // disclosure, no argument/result sections, nothing to expand.
+  if (compactToolRows(level)) return renderToolSummaryRow(item)
   const container = node('div', 'tool-item')
   const details = node('details', `tool-card ${item.status || ''}`) as HTMLDetailsElement
-  details.dataset.disclosureKey = 'tool'
+  details.dataset.disclosureKey = `tool-${item.id}`
+  // verbose starts every card expanded (arguments and results visible);
+  // other levels default collapsed with the reader's intent preserved.
+  if (toolCardsOpenByDefault(level)) {
+    details.dataset.autoOpen = 'true'
+    details.open = true
+  } else {
+    details.dataset.autoOpen = 'false'
+  }
   details.append(createToolCardHeader(document, {
     title: toolDisplayName(item.title || t('tool')),
     glyph: toolIcon(item.title),
@@ -242,6 +275,36 @@ function renderTool(item: ChatItem): HTMLElement {
   // the tool call.
   if (item.workDuration !== undefined) components.workDuration.update(container, item.workDuration)
   return container
+}
+
+/** compact density: one-line tool summary row, no disclosure sections. */
+function renderToolSummaryRow(item: ChatItem): HTMLElement {
+  const container = node('div', 'tool-item')
+  container.append(createToolRow(document, {
+    title: toolDisplayName(item.title || t('tool')),
+    glyph: toolIcon(item.title),
+    status: item.status,
+    ...(item.detail?.trim() ? { preview: toolPreviewText(item.detail) } : {}),
+  }))
+  if (item.workDuration !== undefined) components.workDuration.update(container, item.workDuration)
+  return container
+}
+
+/**
+ * Re-applies one level's disclosure defaults to already-rendered tool cards
+ * and reasoning blocks. Runs only when the transcript density setting
+ * changed, so ordinary renders never fight the reader's own toggles.
+ */
+function applyDisclosureDefaults(level: TranscriptViewLevel): void {
+  const openToolCards = toolCardsOpenByDefault(level)
+  for (const card of Array.from(elements.messages.querySelectorAll<HTMLDetailsElement>('.tool-card'))) {
+    card.dataset.autoOpen = openToolCards ? 'true' : 'false'
+    card.open = openToolCards
+  }
+  for (const block of Array.from(elements.messages.querySelectorAll<HTMLDetailsElement>('.reasoning-block'))) {
+    block.dataset.autoOpen = level === 'verbose' ? 'true' : 'false'
+    block.open = level === 'verbose'
+  }
 }
 
 /** Section heading for a tool card, with a muted estimated token count. */

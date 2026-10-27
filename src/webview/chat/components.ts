@@ -7,6 +7,7 @@ import { createEditorContextComponent } from '../editor-context/component.js'
 import { createFileMentionComponent } from '../file-mention/component.js'
 import { renderMarkdown } from '../markdown.js'
 import { createPluginCenterComponent } from '../plugin-center/component.js'
+import { transcriptViewPreferences } from '../../domain/transcript-view.js'
 import { shouldPinStreamFrame } from '../streaming-message/scroll-policy.js'
 import { StreamingMessageComponent } from '../streaming-message/component.js'
 import { createWorkDurationComponent } from '../work-duration/component.js'
@@ -100,6 +101,10 @@ components.streamingMessage = new StreamingMessageComponent({
       pinConversationToBottom()
     }
   },
+  // Verbose transcript density renders reasoning blocks expanded from the
+  // moment they appear; evaluated lazily so a setting change applies to the
+  // next created block without rebuilding this component.
+  reasoningOpenByDefault: () => transcriptViewPreferences(payload?.configuration).level === 'verbose',
 })
 
 components.pluginCenter = createPluginCenterComponent({

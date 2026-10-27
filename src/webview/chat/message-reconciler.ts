@@ -16,6 +16,17 @@ interface MessageRenderer {
   release(element: HTMLElement): void
 }
 
+export interface ReconcileOptions {
+  /**
+   * Presentation-only signature salt: changing it (without any item changing)
+   * replaces every existing element once through renderer.replace. Used for
+   * transcript display-density switches, where tool cards and reasoning rows
+   * must re-render with a different structure while user disclosure intent is
+   * carried over by capture/restore.
+   */
+  readonly signatureSuffix?: string
+}
+
 /**
  * Owns transcript node identity, independently of Markdown and scroll policy.
  * A final event reuses its partial's turn/step node. Auxiliary cards between
@@ -27,7 +38,7 @@ export class MessageReconciler {
   private readonly signatures = new WeakMap<HTMLElement, string>()
   private groups: readonly MessageGroup[] = []
 
-  reconcile(root: HTMLElement, sessionId: string, items: readonly ChatItem[], renderer: MessageRenderer): void {
+  reconcile(root: HTMLElement, sessionId: string, items: readonly ChatItem[], renderer: MessageRenderer, options: ReconcileOptions = {}): void {
     const previous = [root, ...this.groups.map((group) => group.content)]
       .flatMap((parent) => Array.from(parent.children).filter(isMessageElement))
     if (this.sessionId !== sessionId) {
@@ -54,7 +65,9 @@ export class MessageReconciler {
     const retained = new Set<HTMLElement>()
 
     for (const item of items) {
-      const signature = JSON.stringify(item)
+      const signature = options.signatureSuffix === undefined
+        ? JSON.stringify(item)
+        : JSON.stringify([item, options.signatureSuffix])
       const streamKey = item.kind === 'message' && item.role === 'assistant' ? item.streamKey : undefined
       let element = existing.get(item.id) ?? (streamKey === undefined ? undefined : partials.get(streamKey))
       if (streamKey !== undefined) partials.delete(streamKey)

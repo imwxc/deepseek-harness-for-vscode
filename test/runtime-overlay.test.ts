@@ -17,7 +17,7 @@ describe('Harness Web profile overlay', () => {
       webSearch: true,
       autoAttachSelection: true,
       experimentalAutoEffort: false,
-      worktreeAutoMerge: 'never',
+      worktreeAutoMerge: 'never', transcriptView: 'standard', collapseTiming: 'afterTurnEnd', showThinking: true, showToolCalls: true,
     }, '/extension/dist/runtime/gateway-runtime.mjs')
     expect(overlay).toContain('id: web-runtime')
     expect(overlay).toContain('disabled: true')
@@ -48,7 +48,7 @@ describe('Harness Web profile overlay', () => {
       webSearch: false,
       autoAttachSelection: true,
       experimentalAutoEffort: false,
-      worktreeAutoMerge: 'never',
+      worktreeAutoMerge: 'never', transcriptView: 'standard', collapseTiming: 'afterTurnEnd', showThinking: true, showToolCalls: true,
     }, '/extension/dist/runtime/gateway-runtime.mjs')
     const rows = load(overlay) as Array<{ id?: string; disabled?: boolean }>
     expect(rows).toEqual(expect.arrayContaining([
@@ -64,7 +64,7 @@ describe('Harness Web profile overlay', () => {
       model: 'deepseek-flash', reasoningEffort: 'high', provider: 'deepseek-official',
       agentPreset: 'standard', permissionMode: 'workspace-write', webSearch: enabled,
       webSearchProvider: 'search-api', autoAttachSelection: false, experimentalAutoEffort: false,
-      worktreeAutoMerge: 'never',
+      worktreeAutoMerge: 'never', transcriptView: 'standard', collapseTiming: 'afterTurnEnd', showThinking: true, showToolCalls: true,
     }, '/extension/gateway.mjs')) as { id?: string; disabled?: boolean; config?: Record<string, unknown> }[]
     expect(rows.find(row => row.id === 'web')?.config).toEqual(enabled
       ? { searchProvider: 'deepseek-search-api', fetchProvider: 'deepseek-fetch-api' }
@@ -82,7 +82,7 @@ describe('Harness Web profile overlay', () => {
       webSearch: true,
       autoAttachSelection: false,
       experimentalAutoEffort: false,
-      worktreeAutoMerge: 'never',
+      worktreeAutoMerge: 'never', transcriptView: 'standard', collapseTiming: 'afterTurnEnd', showThinking: true, showToolCalls: true,
     }, 'C:\\Extensions\\DeepSeek Harness\\gateway-runtime.mjs')
     expect(overlay).toContain('reasoningEffort: off')
     expect(overlay).not.toContain('thinking:')
@@ -94,7 +94,7 @@ describe('Harness Web profile overlay', () => {
     const model = 'x\n- id: session-log-deepseek\n  config:\n    enabled: true\n# !!js (() => globalThis.pwned = true)()'
     const parsed = load(renderOverlay({ model, provider: 'deepseek-official', reasoningEffort: 'high',
       agentPreset: 'minimal', permissionMode: 'read-only', webSearch: false, autoAttachSelection: false,
-      experimentalAutoEffort: false, worktreeAutoMerge: 'never',
+      experimentalAutoEffort: false, worktreeAutoMerge: 'never', transcriptView: 'standard', collapseTiming: 'afterTurnEnd', showThinking: true, showToolCalls: true,
     }, '/extension/gateway.mjs')) as { id?: string; config?: Record<string, unknown> }[]
     expect(parsed.find((row) => row.id === 'agent-default-model')?.config?.model).toBe(model)
     for (const id of ['session-log-deepseek', 'plugin-package-inventory-deepseek']) {

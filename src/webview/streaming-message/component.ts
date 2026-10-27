@@ -39,6 +39,8 @@ export class StreamingMessageComponent {
     readonly reasoningDoneLabel: (elapsedMs: number, tokens?: number) => string
     readonly renderMarkdown: (target: HTMLElement, source: string) => void
     readonly onStreamFrame: () => void
+    /** Whether new reasoning blocks start expanded (verbose transcript density). */
+    readonly reasoningOpenByDefault?: () => boolean
   }) {}
 
   render(body: HTMLElement, item: StreamingMessage): void {
@@ -110,8 +112,10 @@ export class StreamingMessageComponent {
       // Like the DSH Web UI, the thinking block stays collapsed by default;
       // the summary row carries a one-line live preview while it streams, and
       // the reader expands it explicitly if they want the full reasoning.
-      details.dataset.autoOpen = 'false'
-      details.open = false
+      // Verbose transcript density opts new blocks into starting expanded.
+      const openByDefault = this.options.reasoningOpenByDefault?.() === true
+      details.dataset.autoOpen = openByDefault ? 'true' : 'false'
+      details.open = openByDefault
       const summary = this.options.document.createElement('summary')
       summary.append(this.reasoningDot(), this.label(running, block), this.reasoningPreview(block.text), this.chevron())
       const content = this.options.document.createElement('div')

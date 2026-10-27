@@ -34,3 +34,38 @@ export function createToolCardHeader(document: Document, options: {
   summary.append(chevron)
   return summary
 }
+
+/**
+ * compact transcript density: the same header pieces as a tool card, flattened
+ * into one non-disclosure summary row (no chevron, nothing to expand).
+ */
+export function createToolRow(document: Document, options: {
+  readonly title: string
+  readonly glyph: IconName
+  readonly status: ChatItem['status']
+  readonly preview?: string
+}): HTMLElement {
+  const row = document.createElement('div')
+  row.className = 'tool-row'
+  if (options.status !== undefined) row.classList.add(options.status)
+  const status = document.createElement('span')
+  status.className = 'tool-status'
+  const stateIcon = options.status === 'running' ? 'spinner' : options.status === 'error' ? 'cancel' : 'check'
+  applyIcon(status, icon(stateIcon, 12))
+  const glyph = document.createElement('span')
+  glyph.className = 'tool-glyph'
+  applyIcon(glyph, icon(options.glyph, 13))
+  const title = document.createElement('span')
+  title.className = 'tool-title'
+  title.textContent = options.title
+  title.title = options.title
+  row.append(status, glyph, title)
+  if (options.preview !== undefined && options.preview !== '') {
+    const preview = document.createElement('span')
+    preview.className = 'tool-preview'
+    preview.textContent = options.preview
+    preview.title = options.preview
+    row.append(preview)
+  }
+  return row
+}

@@ -1,3 +1,4 @@
+import type { TurnCollapseTiming } from './transcript-view.js'
 import type { ChatItem } from './workbench-state.js'
 
 /** A presentation-only group: the durable transcript is never rewritten. */
@@ -12,6 +13,16 @@ export interface TurnProcessProjection {
   readonly groups: readonly TurnProcessView[]
 }
 
+export interface TurnProcessOptions {
+  /**
+   * Collapse timing for completed turns: `afterTurnEnd` (default) folds the
+   * process as soon as the turn finishes; `nextMessage` keeps the newest
+   * completed turn in its live, unfolded presentation until a later human
+   * message or host command arrives.
+   */
+  readonly collapseTiming?: TurnCollapseTiming
+}
+
 interface TurnSegment {
   key: string
   turn?: number
@@ -23,7 +34,7 @@ interface TurnSegment {
  * Runtime turn ids prevent queued prompts, auto-continuations and paged history
  * from merging unrelated work. Legacy messages fall back to user boundaries.
  */
-export function projectTurnProcesses(messages: readonly ChatItem[], running: boolean): TurnProcessProjection {
+export function projectTurnProcesses(messages: readonly ChatItem[], running: boolean, options: TurnProcessOptions = {}): TurnProcessProjection {
   const segments: TurnSegment[] = []
   let current: TurnSegment | undefined
   let boundary = 'history'
@@ -55,6 +66,10 @@ export function projectTurnProcesses(messages: readonly ChatItem[], running: boo
     const followedByUser = messages.slice(messages.indexOf(latest!) + 1).some((item) => item.kind === 'message' && item.role === 'user')
     const live = segment.turn === undefined ? segment === segments.at(-1) && !followedByUser : segment.turn === latestTurn
     if (running && duration === undefined && live) continue
+    // nextMessage collapse timing: the freshest completed turn keeps its live
+    // (unfolded) presentation — the reader just watched it happen — until the
+    // next message or host command arrives to move the conversation on.
+    if (options.collapseTiming === 'nextMessage' && live && !followedByUser) continue
     const work = segment.items.filter((item) => item.kind === 'tool' || (item.kind === 'message' && item.role === 'assistant'))
     const last = work.at(-1)
     const conclusion = last?.kind === 'message' && last.blocks?.some((block) => block.kind !== 'reasoning' && block.text.trim() !== '') ? last : undefined

@@ -116,3 +116,42 @@ describe('per-turn process disclosure and message ownership', () => {
     expect(f.create).toHaveBeenCalledTimes(3)
   })
 })
+
+describe('transcript density disclosure defaults', () => {
+  function renderWith(openByDefault: boolean) {
+    const root = document.createElement('div')
+    document.body.append(root)
+    const groups = new TurnProcessComponent(document, (key) => key)
+    const reconciler = new MessageReconciler()
+    const view = projectTurnProcesses([assistant('thinking'), tool, ended], false)
+    reconciler.reconcile(root, 's1', view.messages, {
+      create: (item) => Object.assign(document.createElement('article'), { textContent: item.id }),
+      patch: () => false,
+      replace: (_element, item) => Object.assign(document.createElement('article'), { textContent: item.id }),
+      release: () => undefined,
+      groups: groups.prepare('s1', view.groups, openByDefault),
+    })
+    return { root, groups, view }
+  }
+
+  it('creates groups open when the density asks for expanded processes', () => {
+    const { root } = renderWith(true)
+    expect(root.querySelector<HTMLDetailsElement>('.turn-process')!.open).toBe(true)
+  })
+
+  it('re-applies the new default to existing groups when the density changes', () => {
+    const { root, groups, view } = renderWith(false)
+    const group = root.querySelector<HTMLDetailsElement>('.turn-process')!
+    expect(group.open).toBe(false)
+    // Reader expands it manually; unchanged density must not touch it.
+    group.open = true
+    groups.prepare('s1', view.groups, false)
+    expect(group.open).toBe(true)
+    // Density switch to detailed/verbose collapses-or-expands every group once.
+    groups.prepare('s1', view.groups, true)
+    expect(group.open).toBe(true)
+    group.open = false
+    groups.prepare('s1', view.groups, false)
+    expect(group.open).toBe(false)
+  })
+})

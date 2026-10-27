@@ -41,13 +41,13 @@ export async function bootSmokeRuntime(modelBaseUrl: string, options: SmokeOptio
     model: 'deepseek-flash', provider: 'deepseek-official', reasoningEffort: 'high',
     agentPreset: 'minimal', permissionMode: options.permissionMode ?? 'read-only', webSearch: options.webSearch ?? false,
     webSearchProvider: options.webSearchProvider ?? 'messages',
-    autoAttachSelection: false, experimentalAutoEffort: false, worktreeAutoMerge: 'never',
+    autoAttachSelection: false, experimentalAutoEffort: false, worktreeAutoMerge: 'never', transcriptView: 'standard', collapseTiming: 'afterTurnEnd', showThinking: true, showToolCalls: true,
   }, gatewayPlugin, options.historyHome).replace('reasoningEffort: high', `reasoningEffort: high\n    apiKeyEnv: DSH_SMOKE_API_KEY\n    baseURL: ${JSON.stringify(modelBaseUrl)}`) : renderOverlay({
     mcpServers: options.mcpServers ?? [],
     model: 'deepseek-v4-flash', provider: 'smoke', reasoningEffort: 'high',
     agentPreset: 'minimal', permissionMode: options.permissionMode ?? 'read-only', webSearch: options.webSearch ?? false,
     webSearchProvider: options.webSearchProvider ?? 'messages',
-    autoAttachSelection: false, experimentalAutoEffort: false, worktreeAutoMerge: 'never',
+    autoAttachSelection: false, experimentalAutoEffort: false, worktreeAutoMerge: 'never', transcriptView: 'standard', collapseTiming: 'afterTurnEnd', showThinking: true, showToolCalls: true,
   }, gatewayPlugin, options.historyHome).replace('provider: "deepseek-official"', 'provider: "smoke"')
   if (!messages) {
     const baseURL = modelBaseUrl.replace(/\/+$/u, '')

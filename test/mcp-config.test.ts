@@ -15,7 +15,7 @@ describe('MCP profile overlay configuration', () => {
     expect(rows).toContain('maxAttempts: 3')
     expect(rows).toContain('transport: streamable-http')
     expect(rows).toContain('Authorization: !!js process.env.MCP_TOKEN')
-    const overlay = renderOverlay({ model: 'deepseek-flash', provider: 'deepseek-official', reasoningEffort: 'high', agentPreset: 'standard', permissionMode: 'workspace-write', webSearch: true, autoAttachSelection: true, experimentalAutoEffort: false, worktreeAutoMerge: 'never', mcpServers: servers }, '/tmp/gateway.mjs')
+    const overlay = renderOverlay({ model: 'deepseek-flash', provider: 'deepseek-official', reasoningEffort: 'high', agentPreset: 'standard', permissionMode: 'workspace-write', webSearch: true, autoAttachSelection: true, experimentalAutoEffort: false, worktreeAutoMerge: 'never', transcriptView: 'standard', collapseTiming: 'afterTurnEnd', showThinking: true, showToolCalls: true, mcpServers: servers }, '/tmp/gateway.mjs')
     expect(overlay).toContain("name: '@deepseek-ai/dsh-mcp-client'")
   })
 

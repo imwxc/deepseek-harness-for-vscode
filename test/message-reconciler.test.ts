@@ -145,4 +145,32 @@ describe('transcript node identity', () => {
     expect(root.lastElementChild).toBe(retained)
     expect(Array.from(root.children).map((child) => (child as HTMLElement).dataset.messageId)).toEqual(['event-a', 'event-b'])
   })
+
+  it('replaces unchanged elements once when the presentation signature changes', () => {
+    const root = messageBody()
+    const reconciler = new MessageReconciler()
+    // Tool cards patch to false in the real renderer, so a signature change
+    // (here: a transcript density suffix) routes them through replace.
+    const create = vi.fn((item: ChatItem): HTMLElement => {
+      const article = document.createElement('article')
+      article.dataset.messageId = item.id
+      article.textContent = item.id
+      return article
+    })
+    const renderer = { create, patch: vi.fn(() => false), replace: vi.fn((_element: HTMLElement, item: ChatItem) => create(item)), release: vi.fn() }
+    const item: ChatItem = { id: 'event-t', seq: 1, time: 1, kind: 'tool', status: 'success', title: 'bash' }
+    reconciler.reconcile(root, 's1', [item], renderer, { signatureSuffix: 'standard' })
+    const original = root.firstElementChild
+    expect(create).toHaveBeenCalledTimes(1)
+    // Same items, same suffix: nothing is recreated.
+    reconciler.reconcile(root, 's1', [item], renderer, { signatureSuffix: 'standard' })
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(root.firstElementChild).toBe(original)
+    // Same items, new suffix (transcript density switch): replaced exactly once.
+    reconciler.reconcile(root, 's1', [item], renderer, { signatureSuffix: 'verbose' })
+    expect(create).toHaveBeenCalledTimes(2)
+    expect(renderer.replace).toHaveBeenCalledTimes(1)
+    expect(root.firstElementChild).not.toBe(original)
+    expect(root.children).toHaveLength(1)
+  })
 })
